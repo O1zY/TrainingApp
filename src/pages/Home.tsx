@@ -1,6 +1,11 @@
-import { CalendarPlus, Flag } from 'lucide-react'
+import { Flag, HeartPulse } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Card, StatTile } from '../components/ui'
+import { formatTime, todayIso } from '../log/format'
+import { useLog } from '../log/LogStore'
+import { SPORTS } from '../log/sports'
+import { sessionLoad } from '../log/stats'
+import { Feed } from './log/Feed'
 import { useSettings } from '../settings/SettingsContext'
 
 function greeting(d: Date) {
@@ -25,6 +30,13 @@ export default function Home() {
   const today = new Date()
   const days = weekDays(today, settings.weekStartsOn)
   const distUnit = settings.units === 'metric' ? 'km' : 'mi'
+  const { sessions, wellbeing } = useLog()
+  const weekIsos = days.map((d) => todayIso(d))
+  const week = sessions.filter((s) => weekIsos.includes(s.date) && s.status === 'completed' && s.sport !== 'transition')
+  const weekSec = week.reduce((a, s) => a + (s.durationSec ?? 0), 0)
+  const weekDist = week.reduce((a, s) => a + (s.distanceM ?? 0), 0) / (settings.units === 'metric' ? 1000 : 1609.344)
+  const weekLoad = week.reduce((a, s) => a + (sessionLoad(s) ?? 0), 0)
+  const checkedIn = wellbeing.some((w) => w.date === todayIso(today))
 
   return (
     <div className="space-y-5">
@@ -41,6 +53,11 @@ export default function Home() {
             <div>
               <p className="font-semibold">Nothing planned</p>
               <p className="text-sm text-muted">Planned sessions from your programme will show here.</p>
+              {!checkedIn && (
+                <Link to={`/log/wellbeing/${todayIso(today)}/edit`} className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-accent-strong">
+                  <HeartPulse className="size-4" /> Do today’s check-in
+                </Link>
+              )}
             </div>
             <div className="flex gap-2">
               <Link to="/log" className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-on-accent hover:opacity-90">
@@ -70,6 +87,7 @@ export default function Home() {
         <div className="grid grid-cols-7 gap-1.5 md:gap-3">
           {days.map((d) => {
             const isToday = sameDay(d, today)
+            const daySessions = week.filter((s) => s.date === todayIso(d))
             return (
               <div
                 key={d.toISOString()}
@@ -79,8 +97,11 @@ export default function Home() {
                   {d.toLocaleDateString('en-GB', { weekday: 'short' }).slice(0, 3)}
                 </span>
                 <span className={`tabular mt-0.5 text-lg font-bold ${isToday ? 'text-accent-strong' : ''}`}>{d.getDate()}</span>
-                {/* Session dots go here once logging exists. */}
-                <span className="mt-1.5 h-1.5" />
+                <span className="mt-1.5 flex h-1.5 flex-wrap justify-center gap-0.5">
+                  {daySessions.slice(0, 4).map((s) => (
+                    <span key={s.id} title={SPORTS[s.sport].label} className={`size-1.5 rounded-full ${SPORTS[s.sport].bg}`} />
+                  ))}
+                </span>
               </div>
             )
           })}
@@ -88,17 +109,14 @@ export default function Home() {
       </Card>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-5">
-        <StatTile label="Time this week" value="0:00" unit="h" />
-        <StatTile label="Distance" value="0" unit={distUnit} />
-        <StatTile label="Sessions" value="0" />
-        <StatTile label="Training load" value="—" />
+        <StatTile label="Time this week" value={weekSec ? formatTime(weekSec, false).replace(/:\d\d$/, '') : '0:00'} unit="h" />
+        <StatTile label="Distance" value={weekDist ? weekDist.toFixed(1) : '0'} unit={distUnit} />
+        <StatTile label="Sessions" value={String(week.length)} />
+        <StatTile label="Training load" value={weekLoad ? String(weekLoad) : '—'} />
       </div>
 
-      <Card title="Recent activity">
-        <div className="flex items-center gap-3 py-2 text-sm text-muted">
-          <CalendarPlus className="size-5" />
-          Logged and imported sessions will appear here as a feed.
-        </div>
+      <Card title="Recent activity" action={<Link to="/log" className="text-sm font-medium text-accent-strong">All history</Link>}>
+        <Feed limitDays={5} />
       </Card>
     </div>
   )

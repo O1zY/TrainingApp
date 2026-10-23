@@ -1,4 +1,4 @@
-import { BookOpen, CalendarRange, ChartLine, Plus } from 'lucide-react'
+import { BookOpen, CalendarRange, ChartLine } from 'lucide-react'
 import { EmptyState, PageHeader } from '../components/ui'
 
 // Each of these is replaced by its own section in a later build session (see docs/SPEC.md).
@@ -11,19 +11,6 @@ export function Plan() {
         icon={CalendarRange}
         title="Programme planner"
         body="Build blocks, weeks and sessions, and schedule them around races. Coming in section 4."
-      />
-    </>
-  )
-}
-
-export function Log() {
-  return (
-    <>
-      <PageHeader title="Log session" subtitle="Record what you actually did" />
-      <EmptyState
-        icon={Plus}
-        title="Session logging"
-        body="Quick logging for rowing, erg, running, cycling, strength and recovery. Coming in section 2."
       />
     </>
   )

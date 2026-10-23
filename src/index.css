@@ -21,6 +21,7 @@
   --sport-row: #2563eb;
   --sport-run: #e05a1c;
   --sport-bike: #b4870b;
+  --sport-swim: #0369a1;
   --sport-strength: #7c3aed;
   --sport-recovery: #0e9f9f;
 
@@ -42,6 +43,7 @@
   --sport-row: #60a5fa;
   --sport-run: #fb8a52;
   --sport-bike: #facc15;
+  --sport-swim: #38bdf8;
   --sport-strength: #a78bfa;
   --sport-recovery: #2dd4bf;
 
@@ -62,6 +64,7 @@
   --color-sport-row: var(--sport-row);
   --color-sport-run: var(--sport-run);
   --color-sport-bike: var(--sport-bike);
+  --color-sport-swim: var(--sport-swim);
   --color-sport-strength: var(--sport-strength);
   --color-sport-recovery: var(--sport-recovery);
 
