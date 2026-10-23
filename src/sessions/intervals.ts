@@ -48,6 +48,7 @@ export interface Assessment {
 /**
  * How far off (as a fraction) counts as fully missed. Splits are tighter than
  * run pace because a second per 500m is a lot; HR and rate drift naturally.
+ * Fixed for now; the coaching section will make these adapt (see docs/SPEC.md).
  */
 const FULL_MISS: Record<TargetMetric, number> = {
   split: 0.02,

@@ -72,3 +72,12 @@ One per day on Home: sleep duration, sleep score, resting HR, HRV (mirroring Gar
 plus soreness (1 none – 5 very sore) and energy (1 drained – 5 great) and a note. Manual for now,
 stored in localStorage. Garmin has no personal-use API (the Connect Developer Program is for approved
 businesses), so automatic sleep import is an open question — see options discussed 23 Oct 2026.
+
+## Parked for later (noted 23 Oct 2026)
+
+- **Garmin import** for the morning check-in. Too much faff for now (no personal-use API); revisit later.
+- **Adaptive coaching.** The miss thresholds above (`FULL_MISS` in `src/sessions/intervals.ts`) are a
+  flat starting point. A later coaching/training feature should learn from logged sessions and
+  check-ins, spot weaknesses, and adjust how strictly reps are judged: harsher when there's room to
+  push, more forgiving when the athlete is struggling (poor sleep, high soreness, low energy, fading
+  across a block). Thresholds should become per-athlete and per-context rather than fixed rules.
