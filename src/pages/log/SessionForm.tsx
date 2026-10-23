@@ -1,7 +1,8 @@
-import { Repeat, Waypoints } from 'lucide-react'
+import { BookOpen, Repeat, Waypoints } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { PageHeader } from '../../components/ui'
+import { sessionFromWorkout } from '../../library/workouts'
 import { blankSession, copyOf } from '../../log/drafts'
 import { formatDate } from '../../log/format'
 import { useLog, type SessionDraft } from '../../log/LogStore'
@@ -41,9 +42,10 @@ export function SportPicker({ value, onPick, multisport = true }: { value?: Spor
 }
 
 function Form({ initial, editing }: { initial: SessionDraft; editing: boolean }) {
-  const { sessions, saveSession } = useLog()
+  const { sessions, workouts, saveSession } = useLog()
   const navigate = useNavigate()
   const [draft, setDraft] = useState(initial)
+  const workout = workouts.find((w) => w.id === draft.workoutId)
   const patch = (p: Partial<SessionDraft>) => setDraft((d) => ({ ...d, ...p }))
 
   const last = sortSessions(sessions.filter((s) => s.sport === draft.sport && s.id !== draft.id))[0]
@@ -56,9 +58,24 @@ function Form({ initial, editing }: { initial: SessionDraft; editing: boolean })
 
   return (
     <form onSubmit={submit} className="space-y-5 pb-24">
-      {!editing && <SportPicker value={draft.sport} onPick={(sport) => patch({ sport, type: undefined })} />}
+      {workout && (
+        <div className="flex items-center gap-3 rounded-xl border border-accent/40 bg-accent-soft px-4 py-3 text-sm">
+          <BookOpen className="size-4 shrink-0 text-accent-strong" />
+          <span className="min-w-0 flex-1">
+            From your library: <Link to={`/library/${workout.id}`} className="font-semibold text-accent-strong">{workout.name}</Link>
+            <span className="block text-xs text-muted">Targets and the planned work are filled in. Change anything to what actually happened.</span>
+          </span>
+          {!editing && (
+            <button type="button" onClick={() => setDraft((d) => ({ ...d, workoutId: undefined }))} className="shrink-0 text-xs font-medium text-muted hover:text-text">
+              Unlink
+            </button>
+          )}
+        </div>
+      )}
 
-      {!editing && last && (
+      {!editing && !workout && <SportPicker value={draft.sport} onPick={(sport) => patch({ sport, type: undefined })} />}
+
+      {!editing && !workout && last && (
         <button
           type="button"
           onClick={() => setDraft(copyOf(last))}
@@ -90,10 +107,12 @@ function Form({ initial, editing }: { initial: SessionDraft; editing: boolean })
 
 export function NewSession() {
   const [params] = useSearchParams()
-  const { sessions } = useLog()
+  const { sessions, workouts, maxes } = useLog()
   const from = sessions.find((s) => s.id === params.get('from'))
+  const workout = workouts.find((w) => w.id === params.get('workout'))
   const sport = (params.get('sport') as Sport | null) ?? 'erg'
-  const initial = from ? copyOf(from) : blankSession(SPORTS[sport] ? sport : 'erg', params.get('date') ?? undefined)
+  const date = params.get('date') ?? undefined
+  const initial = workout ? sessionFromWorkout(workout, maxes, date) : from ? copyOf(from) : blankSession(SPORTS[sport] ? sport : 'erg', date)
   return (
     <>
       <PageHeader title="Log session" subtitle="Quick: sport, time and RPE. Open the sections for full detail." />

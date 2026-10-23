@@ -1,15 +1,16 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { newId } from './format'
-import type { Multisport, OneRepMax, Session, Wellbeing } from './types'
+import type { Multisport, OneRepMax, Session, Wellbeing, Workout } from './types'
 
 interface LogData {
   sessions: Session[]
   multisport: Multisport[]
   wellbeing: Wellbeing[]
   maxes: OneRepMax[]
+  workouts: Workout[]
 }
 
-const EMPTY: LogData = { sessions: [], multisport: [], wellbeing: [], maxes: [] }
+const EMPTY: LogData = { sessions: [], multisport: [], wellbeing: [], maxes: [], workouts: [] }
 const STORAGE_KEY = 'tt-log-v1'
 
 // Training data lives in localStorage until the Supabase section. Everything that
@@ -23,6 +24,7 @@ function load(): LogData {
 }
 
 export type SessionDraft = Omit<Session, 'id' | 'createdAt' | 'updatedAt'> & { id?: string; createdAt?: string }
+export type WorkoutDraft = Omit<Workout, 'id' | 'createdAt' | 'updatedAt'> & { id?: string; createdAt?: string }
 
 interface LogValue extends LogData {
   saveSession: (draft: SessionDraft) => Session
@@ -34,6 +36,9 @@ interface LogValue extends LogData {
   deleteWellbeing: (date: string) => void
   saveMax: (max: OneRepMax, previousName?: string) => void
   deleteMax: (exercise: string) => void
+  saveWorkout: (draft: WorkoutDraft) => Workout
+  /** Sessions logged from it keep their data; only the link is dropped. */
+  deleteWorkout: (id: string) => void
 }
 
 const LogContext = createContext<LogValue | null>(null)
@@ -118,6 +123,21 @@ export function LogProvider({ children }: { children: ReactNode }) {
 
     deleteMax(exercise) {
       setData((d) => ({ ...d, maxes: d.maxes.filter((m) => m.exercise !== exercise) }))
+    },
+
+    saveWorkout(draft) {
+      const now = stamp()
+      const workout: Workout = { ...draft, id: draft.id ?? newId(), createdAt: draft.createdAt ?? now, updatedAt: now }
+      setData((d) => ({ ...d, workouts: upsert(d.workouts, workout, (w) => w.id === workout.id) }))
+      return workout
+    },
+
+    deleteWorkout(id) {
+      setData((d) => ({
+        ...d,
+        workouts: d.workouts.filter((w) => w.id !== id),
+        sessions: d.sessions.map((s) => (s.workoutId === id ? { ...s, workoutId: undefined } : s)),
+      }))
     },
   }
 

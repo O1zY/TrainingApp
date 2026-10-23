@@ -22,7 +22,7 @@ part training tool (plan programmes, reuse sessions, analyse progress) across ev
 
 1. **App shell + navigation** ✅ — layout, theme tokens, sidebar (laptop) / tab bar (phone), dashboard skeleton, settings
 2. **Session logging** ✅ — fast entry per sport, sport-specific fields, RPE/notes
-3. **Session library** — reusable workouts/templates, log-from-template
+3. **Session library** ✅ — reusable workouts/templates, log-from-template
 4. **Programme planner** — blocks → weeks → sessions, target races, schedule
 5. **Analysis** — training load, PBs, planned vs completed, per-sport trends
 6. **Strava import** — OAuth + activity sync, dedupe against manual logs
@@ -43,6 +43,35 @@ part training tool (plan programmes, reuse sessions, analyse progress) across ev
 | Edit/delete | Included for sessions, multisport events, check-ins and 1RMs |
 
 All data is stored metric (m, s, kg) and converted for display. Splits/pace are never stored — they are derived from distance + time.
+
+## Targets (ported from the friendly-galileo branch, 23 Oct 2026)
+
+Reps (`Piece`) and whole sessions can carry an `Aim`: a `target` (pace, watts, HR or rate, as a range or
+one-sided “this or better”), an `hrZone` (1–5) and a `targetRate`. Pace targets are stored in s/km for
+every sport and shown as /500m, /100m, /km, /mi or speed. Logic: `src/log/targets.ts`; UI: `src/components/targets.tsx`.
+
+Each rep is graded **on target** (green), **harder than target** (amber) or **missed** (red, shading from
+light to deep; fully red at 2% off for rowing splits, 3% other pace, 5% watts/HR, 7% rate). The session page
+shows a rep strip with an HR bar per rep (target zone shaded), “x/y on target”, “x/y in HR zone” and first→last
+rep drift. HR zones live in Settings (max HR, editable zone tops, default 60/70/80/90% of max).
+
+## Session library decisions (agreed 23 Oct 2026)
+
+| Topic | Decision |
+|---|---|
+| Contents | Structure + targets, strength templates by % of 1RM (or fixed weight), tags, description, source/reference |
+| Starter set | None. Built up later from research and Ollie's own sessions; `source` records where each came from |
+| Rep editing | Edited as sets of identical reps (“8 × 500m, 2′ rest”), stored flat as `PieceTemplate`s |
+| Log from template | `/log/new?workout=id` pre-fills targets, rest, the fixed side of each rep (distance *or* time) and % sets turned into kg from the current 1RM (rounded to 2.5kg). The session keeps `workoutId` |
+| Save to library | Any logged session → its structure and targets (not results) |
+| History | Each workout lists the sessions logged from it, for comparing attempts and later planned-vs-done |
+
+## Parked for later (noted 23 Oct 2026)
+
+- **Garmin import** for the morning check-in (no personal-use API); revisit later.
+- **Adaptive coaching.** The miss thresholds in `src/log/targets.ts` are a flat start. A later coaching
+  feature should learn from logged sessions and check-ins and adjust how strictly reps are judged:
+  harsher when there's room to push, more forgiving after poor sleep, high soreness or a fading block.
 
 ## Conventions
 

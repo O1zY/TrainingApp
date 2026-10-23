@@ -1,4 +1,4 @@
-import { ArrowLeft, HeartPulse, Pencil, Plus, Repeat, Trash2, Waypoints } from 'lucide-react'
+import { ArrowLeft, BookOpen, BookmarkPlus, HeartPulse, Pencil, Plus, Repeat, Trash2, Waypoints } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { RepStrip } from '../../components/targets'
@@ -283,7 +283,7 @@ function WodCard({ s }: { s: Session }) {
 
 export default function SessionDetail() {
   const { id } = useParams()
-  const { sessions, multisport, wellbeing, deleteSession } = useLog()
+  const { sessions, multisport, wellbeing, workouts, deleteSession } = useLog()
   const navigate = useNavigate()
   const s = sessions.find((x) => x.id === id)
   if (!s) return <Navigate to="/log" replace />
@@ -291,6 +291,7 @@ export default function SessionDetail() {
   const def = SPORTS[s.sport]
   const event = s.multisportId ? multisport.find((m) => m.id === s.multisportId) : undefined
   const checkin = wellbeing.find((w) => w.date === s.date)
+  const workout = s.workoutId ? workouts.find((w) => w.id === s.workoutId) : undefined
 
   const remove = () => {
     if (!confirm('Delete this session? This can’t be undone.')) return
@@ -333,6 +334,13 @@ export default function SessionDetail() {
         <Link to={`/log/multi/${event.id}`} className="flex items-center gap-3 rounded-xl border border-line bg-surface px-4 py-3 text-sm hover:bg-surface-2">
           <Waypoints className="size-4 text-muted" />
           Leg {event.legIds.indexOf(s.id) + 1} of <span className="font-semibold">{event.title || MULTISPORT_KINDS.find((k) => k.value === event.kind)?.label}</span>
+        </Link>
+      )}
+
+      {workout && (
+        <Link to={`/library/${workout.id}`} className="flex items-center gap-3 rounded-xl border border-line bg-surface px-4 py-3 text-sm hover:bg-surface-2">
+          <BookOpen className="size-4 text-muted" />
+          Logged from <span className="font-semibold">{workout.name}</span>
         </Link>
       )}
 
@@ -380,6 +388,11 @@ export default function SessionDetail() {
         <Link to={`/log/new?from=${s.id}`} className="inline-flex items-center gap-1.5 rounded-lg border border-line px-4 py-2.5 text-sm font-semibold hover:bg-surface-2">
           <Repeat className="size-4" /> Log this again
         </Link>
+        {s.sport !== 'transition' && !workout && (
+          <Link to={`/library/new?from=${s.id}`} className="inline-flex items-center gap-1.5 rounded-lg border border-line px-4 py-2.5 text-sm font-semibold hover:bg-surface-2">
+            <BookmarkPlus className="size-4" /> Save to library
+          </Link>
+        )}
         <Link to={`/log/new?sport=${s.sport === 'transition' ? 'other' : s.sport}`} className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-on-accent hover:opacity-90">
           <Plus className="size-4" /> Log another session
         </Link>

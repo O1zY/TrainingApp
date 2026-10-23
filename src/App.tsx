@@ -8,7 +8,10 @@ import { EditMultisport, MultisportDetail, NewMultisport } from './pages/log/Mul
 import SessionDetail from './pages/log/SessionDetail'
 import { EditSession, NewSession } from './pages/log/SessionForm'
 import { WellbeingDetail, WellbeingForm } from './pages/log/Wellbeing'
-import { Analysis, Library, Plan } from './pages/Placeholders'
+import LibraryHome from './pages/library/LibraryHome'
+import WorkoutDetail from './pages/library/WorkoutDetail'
+import { EditWorkout, NewWorkout } from './pages/library/WorkoutForm'
+import { Analysis, Plan } from './pages/Placeholders'
 import Settings from './pages/Settings'
 import { SettingsProvider } from './settings/SettingsContext'
 
@@ -33,7 +36,12 @@ export default function App() {
                 <Route path="wellbeing/:date/edit" element={<WellbeingForm />} />
                 <Route path="maxes" element={<Maxes />} />
               </Route>
-              <Route path="library" element={<Library />} />
+              <Route path="library">
+                <Route index element={<LibraryHome />} />
+                <Route path="new" element={<NewWorkout />} />
+                <Route path=":id" element={<WorkoutDetail />} />
+                <Route path=":id/edit" element={<EditWorkout />} />
+              </Route>
               <Route path="analysis" element={<Analysis />} />
               <Route path="settings" element={<Settings />} />
               <Route path="*" element={<Navigate to="/" replace />} />
