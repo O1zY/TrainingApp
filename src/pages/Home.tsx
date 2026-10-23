@@ -1,6 +1,8 @@
-import { CalendarPlus, Flag } from 'lucide-react'
+import { Flag } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { SessionCard } from '../components/SessionCard'
 import { Card, StatTile } from '../components/ui'
+import { SAMPLE_SESSIONS } from '../sessions/sampleSessions'
 import { useSettings } from '../settings/SettingsContext'
 
 function greeting(d: Date) {
@@ -94,12 +96,18 @@ export default function Home() {
         <StatTile label="Training load" value="—" />
       </div>
 
-      <Card title="Recent activity">
-        <div className="flex items-center gap-3 py-2 text-sm text-muted">
-          <CalendarPlus className="size-5" />
-          Logged and imported sessions will appear here as a feed.
+      <section>
+        <div className="mb-3 flex items-baseline justify-between">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">Recent activity</h2>
+          {/* Sample data until logging and storage exist. */}
+          <span className="text-xs text-muted">Example sessions</span>
         </div>
-      </Card>
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+          {SAMPLE_SESSIONS.map((s) => (
+            <SessionCard key={s.id} session={s} />
+          ))}
+        </div>
+      </section>
     </div>
   )
 }
