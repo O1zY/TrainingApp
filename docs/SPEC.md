@@ -53,11 +53,22 @@ Model: `src/sessions/types.ts`. Which stats show where: `src/sessions/fields.ts`
 **Intervals.** Structured sessions (tempo, threshold, intervals, race) carry a list of work reps:
 time, distance, rest, avg power, avg/max HR, rate/cadence, and an optional target on one metric
 (power, pace, split, HR or rate) as a range or one-sided bound. Each rep is marked *on target*,
-*harder than target* or *missed*. Easy/steady sessions have no reps and just show the whole-session numbers.
+*harder than target* (amber) or *missed* (red, shading from light to deep the further off it is — full red at 2% off for splits, 3% pace, 5% power/HR, 7% rate). Easy/steady sessions have no reps and just show the whole-session numbers.
 
 **Views.** Session card = overview: headline stats, and for structured sessions a rep strip (one chip per
 rep, coloured by target) with "x/y on target". For structured sessions the headline split/pace/power is the
 average across work reps, not the whole session. One tap expands the card: full interval table (every rep,
 work-rep averages, target, first→last rep drift), strength detail, all session stats, notes.
 
+Reps can also carry a target **HR zone** (1–5). Zones are set in Settings (max HR, editable zone tops,
+default 60/70/80/90% of max). Each rep chip has an HR bar on a 50%–max scale with the target zone shaded,
+coloured the same way, so HR creep across reps is visible.
+
 Strava import (section 6) should map Strava laps onto reps.
+
+## Morning check-in
+
+One per day on Home: sleep duration, sleep score, resting HR, HRV (mirroring Garmin's morning report),
+plus soreness (1 none – 5 very sore) and energy (1 drained – 5 great) and a note. Manual for now,
+stored in localStorage. Garmin has no personal-use API (the Connect Developer Program is for approved
+businesses), so automatic sleep import is an open question — see options discussed 23 Oct 2026.

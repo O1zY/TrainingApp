@@ -22,6 +22,7 @@ const ergReps = (splits: number[], rates: number[], hrs: number[], target: Targe
     avgRate: rates[i],
     avgHR: hrs[i],
     target,
+    hrZone: 4,
   }))
 
 const runReps = (paces: number[], hrs: number[], target: Target): Interval[] =>
@@ -32,6 +33,7 @@ const runReps = (paces: number[], hrs: number[], target: Target): Interval[] =>
     avgHR: hrs[i],
     avgRate: 186,
     target,
+    hrZone: 4,
   }))
 
 export const SAMPLE_SESSIONS: Session[] = [
@@ -67,7 +69,7 @@ export const SAMPLE_SESSIONS: Session[] = [
     maxHR: 181,
     rpe: 7,
     surface: 'track',
-    intervals: runReps([212, 211, 214, 213, 217, 208], [168, 172, 174, 176, 178, 181], { metric: 'pace', min: 210, max: 215 }),
+    intervals: runReps([212, 211, 216, 213, 222, 208], [154, 160, 166, 170, 174, 178], { metric: 'pace', min: 210, max: 215 }),
   },
   {
     id: 's3',
@@ -108,6 +110,7 @@ export const SAMPLE_SESSIONS: Session[] = [
       avgHR: 154 + i * 5,
       avgRate: 90,
       target: { metric: 'power', min: 255, max: 270 },
+      hrZone: 3,
     })),
   },
   {

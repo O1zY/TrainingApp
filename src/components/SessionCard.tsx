@@ -3,13 +3,48 @@ import { useState } from 'react'
 import { useSettings, type Units } from '../settings/SettingsContext'
 import { distance, formatClock, weight } from '../sessions/format'
 import { describeReps, detailStats, formatMetric, headlineStats, INTENTS, SPORTS, STRUCTURED, type Stat } from '../sessions/fields'
-import { checkTarget, describeTarget, primaryMetric, repValue, summarise, TARGET_LABEL, type TargetStatus } from '../sessions/intervals'
+import { checkHR, checkTarget, describeTarget, primaryMetric, repValue, summarise, TARGET_LABEL, zoneOf, zoneRange, type Assessment, type TargetStatus } from '../sessions/intervals'
 import type { Interval, Session, TargetMetric } from '../sessions/types'
 
-const STATUS: Record<TargetStatus, { label: string; text: string; bg: string }> = {
-  hit: { label: 'On target', text: 'text-hit', bg: 'bg-hit' },
-  over: { label: 'Harder than target', text: 'text-over', bg: 'bg-over' },
-  under: { label: 'Missed', text: 'text-miss', bg: 'bg-miss' },
+const STATUS_LABEL: Record<TargetStatus, string> = { hit: 'On target', over: 'Harder than target', under: 'Missed' }
+
+/** Green on target, amber harder, and red that deepens the further a miss is from target. */
+function colour(a: Assessment) {
+  if (a.status === 'hit') return 'var(--hit)'
+  if (a.status === 'over') return 'var(--over)'
+  return `color-mix(in oklab, var(--miss-far) ${Math.round(a.severity * 100)}%, var(--miss-near))`
+}
+
+const title = (a: Assessment) => (a.status === 'hit' ? STATUS_LABEL.hit : `${STATUS_LABEL[a.status]} by ${(a.off * 100).toFixed(1)}%`)
+
+/**
+ * HR for one rep as a bar on a scale from 50% of max to max, with the target
+ * zone shaded behind it so creep across the reps is visible at a glance.
+ */
+function HrBar({ rep, tops, maxHR }: { rep: Interval; tops: number[]; maxHR: number }) {
+  if (rep.avgHR === undefined) return null
+  const lo = maxHR * 0.5
+  const pct = (bpm: number) => `${Math.max(0, Math.min(100, ((bpm - lo) / (maxHR - lo)) * 100))}%`
+  const a = checkHR(rep, tops)
+  const zone = rep.hrZone ? zoneRange(rep.hrZone, tops) : undefined
+  return (
+    <div className="mt-1.5" title={a ? `HR ${title(a).toLowerCase()} (Z${rep.hrZone})` : undefined}>
+      <div className="text-center text-[10px] text-muted">
+        <span className="font-semibold" style={a ? { color: colour(a) } : undefined}>
+          ♥ {rep.avgHR} · Z{zoneOf(rep.avgHR, tops)}
+        </span>
+      </div>
+      <div className="relative mt-0.5 h-1.5 overflow-hidden rounded-full bg-surface-2">
+        {zone && (
+          <span
+            className="absolute inset-y-0 bg-text/15"
+            style={{ left: pct(zone.min ?? lo), right: `calc(100% - ${pct(zone.max ?? maxHR)})` }}
+          />
+        )}
+        <span className="absolute inset-y-0 left-0 rounded-full" style={{ width: pct(rep.avgHR), background: a ? colour(a) : 'var(--muted)' }} />
+      </div>
+    </div>
+  )
 }
 
 function when(iso: string) {
@@ -36,35 +71,41 @@ function StatGrid({ stats, small }: { stats: Stat[]; small?: boolean }) {
 }
 
 /** One chip per rep, coloured by whether it hit its target. The quick-look view. */
-function RepStrip({ session, units }: { session: Session; units: Units }) {
+function RepStrip({ session, units, tops, maxHR }: { session: Session; units: Units; tops: number[]; maxHR: number }) {
   const reps = session.intervals!
-  const summary = summarise(session)!
+  const summary = summarise(session, tops)!
   const metric = primaryMetric(session)
   return (
     <div className="mt-4 rounded-xl bg-surface-2 p-3">
-      <div className="mb-2 flex items-center justify-between gap-2 text-sm">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-sm">
         <span className="font-semibold">{describeReps(reps, session.sport, units)}</span>
-        {summary.targeted > 0 && (
-          <span className={`tabular text-xs font-semibold ${summary.hit === summary.targeted ? 'text-hit' : 'text-muted'}`}>
-            {summary.hit}/{summary.targeted} on target
-          </span>
-        )}
+        <span className="tabular flex gap-3 whitespace-nowrap text-xs font-semibold">
+          {summary.targeted > 0 && (
+            <span className={summary.hit === summary.targeted ? 'text-hit' : 'text-muted'}>
+              {summary.hit}/{summary.targeted} on target
+            </span>
+          )}
+          {summary.hrTargeted > 0 && (
+            <span className={summary.hrHit === summary.hrTargeted ? 'text-hit' : 'text-muted'}>
+              HR {summary.hrHit}/{summary.hrTargeted} in zone
+            </span>
+          )}
+        </span>
       </div>
-      <ol className="flex flex-wrap gap-1.5">
+      <ol className="grid grid-cols-[repeat(auto-fill,minmax(4.5rem,1fr))] gap-1.5">
         {reps.map((r, i) => {
           const v = repValue(r, metric)
-          const status = checkTarget(r)
+          const a = checkTarget(r)
           return (
-            <li
-              key={i}
-              title={status ? STATUS[status].label : undefined}
-              className="tabular flex min-w-16 flex-1 flex-col rounded-lg bg-surface px-2 py-1.5 text-center"
-            >
-              <span className="text-[10px] font-medium text-muted">Rep {i + 1}</span>
-              <span className={`text-sm font-semibold ${status ? STATUS[status].text : ''}`}>
-                {v !== undefined ? formatMetric(metric, v, session.sport, units).value : '—'}
-              </span>
-              {status && <span className={`mx-auto mt-1 h-1 w-6 rounded-full ${STATUS[status].bg}`} />}
+            <li key={i} className="tabular flex flex-col rounded-lg bg-surface px-2 py-1.5">
+              <div className="text-center" title={a ? title(a) : undefined}>
+                <span className="block text-[10px] font-medium text-muted">Rep {i + 1}</span>
+                <span className="text-sm font-semibold" style={a ? { color: colour(a) } : undefined}>
+                  {v !== undefined ? formatMetric(metric, v, session.sport, units).value : '—'}
+                </span>
+                {a && <span className="mx-auto mt-1 block h-1 w-6 rounded-full" style={{ background: colour(a) }} />}
+              </div>
+              <HrBar rep={r} tops={tops} maxHR={maxHR} />
             </li>
           )
         })}
@@ -74,9 +115,9 @@ function RepStrip({ session, units }: { session: Session; units: Units }) {
 }
 
 /** Full per-rep breakdown: every metric the reps have, the target, and how each rep went. */
-function IntervalTable({ session, units }: { session: Session; units: Units }) {
+function IntervalTable({ session, units, tops }: { session: Session; units: Units; tops: number[] }) {
   const reps = session.intervals!
-  const summary = summarise(session)!
+  const summary = summarise(session, tops)!
   const sport = session.sport
   const hasDistance = reps.some((r) => r.distanceM)
   // Equal-distance reps already say their distance in the rep summary, so skip the column.
@@ -86,7 +127,7 @@ function IntervalTable({ session, units }: { session: Session; units: Units }) {
     if (m === 'pace') return sport === 'run' && hasDistance
     return reps.some((r) => repValue(r, m) !== undefined)
   })
-  const hasTargets = reps.some((r) => r.target)
+  const hasTargets = reps.some((r) => r.target || r.hrZone)
   const hasRest = reps.some((r) => r.restS)
   // Units live in the header so the cells stay narrow enough for a phone.
   const fmt = (m: TargetMetric, v: number | undefined) => (v === undefined ? '—' : formatMetric(m, v, sport, units).value)
@@ -126,22 +167,31 @@ function IntervalTable({ session, units }: { session: Session; units: Units }) {
           </thead>
           <tbody>
             {reps.map((r, i) => {
-              const status = checkTarget(r)
+              const a = checkTarget(r)
+              const hr = checkHR(r, tops)
+              // The target metric and HR cells carry their own colour; everything else stays neutral.
+              const cellColour = (m: TargetMetric) => (m === r.target?.metric && a ? colour(a) : m === 'hr' && hr ? colour(hr) : undefined)
               return (
                 <tr key={i} className="border-b border-line/60">
                   <td className="py-2 pr-3 text-muted">{i + 1}</td>
                   <td className="py-2 pr-3">{formatClock(r.durationS, sport === 'row' ? 1 : 0)}</td>
                   {showDistance && <td className="py-2 pr-3">{r.distanceM ? distanceText(r.distanceM, units, sport) : '—'}</td>}
                   {metrics.map((m) => (
-                    <td key={m} className={`py-2 pr-3 ${status && r.target?.metric === m ? `font-semibold ${STATUS[status].text}` : ''}`}>
+                    <td
+                      key={m}
+                      className={`py-2 pr-3 ${cellColour(m) ? 'font-semibold' : ''}`}
+                      style={{ color: cellColour(m) }}
+                      title={m === r.target?.metric && a ? title(a) : m === 'hr' && hr ? title(hr) : undefined}
+                    >
                       {fmt(m, repValue(r, m))}
                     </td>
                   ))}
                   {hasRest && <td className="py-2 pr-3 text-muted">{r.restS ? formatClock(r.restS) : '—'}</td>}
                   {hasTargets && (
                     <td className="py-2 pr-3 text-muted">
-                      {r.target ? describeTarget(r.target, (v) => fmt(r.target!.metric, v)) : '—'}
-                      {status && <span className={`ml-2 inline-block size-2 rounded-full ${STATUS[status].bg}`} title={STATUS[status].label} />}
+                      {[r.target && describeTarget(r.target, (v) => fmt(r.target!.metric, v)), r.hrZone && `HR Z${r.hrZone}`]
+                        .filter(Boolean)
+                        .join(' · ') || '—'}
                     </td>
                   )}
                 </tr>
@@ -237,7 +287,7 @@ export function SessionCard({ session, defaultOpen = false }: { session: Session
         <div className="mt-4">
           <StatGrid stats={headlineStats(session, settings.units)} />
         </div>
-        {structured && <RepStrip session={session} units={settings.units} />}
+        {structured && <RepStrip session={session} units={settings.units} tops={settings.hrZoneTops} maxHR={settings.maxHR} />}
       </button>
 
       {open && (
@@ -245,7 +295,7 @@ export function SessionCard({ session, defaultOpen = false }: { session: Session
           {structured && (
             <section>
               <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">Intervals</h4>
-              <IntervalTable session={session} units={settings.units} />
+              <IntervalTable session={session} units={settings.units} tops={settings.hrZoneTops} />
             </section>
           )}
           {session.sport === 'strength' && (

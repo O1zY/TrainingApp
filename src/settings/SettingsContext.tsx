@@ -1,3 +1,4 @@
+import { zonesFromMax } from './hrZones'
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 
 export type ThemePref = 'system' | 'light' | 'dark'
@@ -8,9 +9,12 @@ export interface Settings {
   units: Units
   /** 1 = Monday. Training weeks start on Monday by default. */
   weekStartsOn: 0 | 1
+  maxHR: number
+  /** Top bpm of HR zones 1–4; zone 5 runs from the last one to max. */
+  hrZoneTops: number[]
 }
 
-const DEFAULTS: Settings = { theme: 'system', units: 'metric', weekStartsOn: 1 }
+const DEFAULTS: Settings = { theme: 'system', units: 'metric', weekStartsOn: 1, maxHR: 195, hrZoneTops: zonesFromMax(195) }
 const STORAGE_KEY = 'tt-settings'
 
 // Settings live in localStorage until the database section is built.

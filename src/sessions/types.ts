@@ -46,6 +46,8 @@ export interface Interval {
   /** Stroke rate (rowing) or cadence (run/bike). */
   avgRate?: number
   target?: Target
+  /** Heart-rate zone (1–5) this rep should sit in, checked against the athlete's zones. */
+  hrZone?: number
 }
 
 export interface StrengthSet {

@@ -1,5 +1,6 @@
 import { Flag } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { CheckInCard } from '../components/CheckInCard'
 import { SessionCard } from '../components/SessionCard'
 import { Card, StatTile } from '../components/ui'
 import { SAMPLE_SESSIONS } from '../sessions/sampleSessions'
@@ -36,6 +37,8 @@ export default function Home() {
         </p>
         <h1 className="mt-0.5 text-2xl font-bold tracking-tight md:text-3xl">{greeting(today)}, Ollie</h1>
       </div>
+
+      <CheckInCard />
 
       <div className="grid gap-5 lg:grid-cols-3">
         <Card title="Today" className="lg:col-span-2">
