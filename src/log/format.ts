@@ -112,6 +112,15 @@ export function formatPace(kind: PaceKind, value: number | undefined): string {
   return isSpeed(kind) ? value.toFixed(1) : formatTime(value)
 }
 
+/** Pace target base unit (s/km) → the sport's display value, and back. */
+export function paceFromBase(kind: PaceKind, sPerKm: number) {
+  return isSpeed(kind) ? (3600 / sPerKm) * (1000 / PACE_METRES[kind]) : (sPerKm * PACE_METRES[kind]) / 1000
+}
+
+export function paceToBase(kind: PaceKind, value: number) {
+  return isSpeed(kind) ? (3600 * 1000) / (value * PACE_METRES[kind]) : (value * 1000) / PACE_METRES[kind]
+}
+
 /** Given a pace and one of distance/time, works out the other. */
 export function fromPace(kind: PaceKind, value: number, known: { distM?: number; sec?: number }): { distM?: number; sec?: number } {
   const per = PACE_METRES[kind]

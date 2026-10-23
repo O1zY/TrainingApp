@@ -4,6 +4,7 @@ import { PACE_LABEL, distanceUnit, formatDate, formatDistance, formatPace, forma
 import { useLog } from '../../log/LogStore'
 import { SPORTS, eventName, sessionName } from '../../log/sports'
 import { multisportTimeline, sortSessions, wellnessScore } from '../../log/stats'
+import { summariseTargets } from '../../log/targets'
 import type { Multisport, Session, Sport, Wellbeing } from '../../log/types'
 import { useSettings } from '../../settings/SettingsContext'
 
@@ -30,7 +31,8 @@ function useFeed(filter?: Sport) {
   return [...byDate.entries()].sort(([a], [b]) => b.localeCompare(a))
 }
 
-function sessionLine(s: Session, units: ReturnType<typeof useSettings>['settings']['units']) {
+function sessionLine(s: Session, { units, hrZoneTops }: ReturnType<typeof useSettings>['settings']) {
+  const targets = s.pieces?.length ? summariseTargets(s.pieces, s.sport, hrZoneTops) : undefined
   const kind = paceKind(s.sport, units)
   const unit = distanceUnit(s.sport, units)
   const pace = kind ? paceValue(kind, s.distanceM, s.durationSec) : undefined
@@ -39,6 +41,7 @@ function sessionLine(s: Session, units: ReturnType<typeof useSettings>['settings
     s.durationSec != null && formatTime(s.durationSec, false),
     kind && pace != null && `${formatPace(kind, pace)}${PACE_LABEL[kind]}`,
     s.pieces?.length && `${s.pieces.length} pieces`,
+    targets?.targeted && `${targets.hit}/${targets.targeted} on target`,
     s.exercises?.length && `${s.exercises.length} exercises`,
     s.rpe != null && `RPE ${s.rpe}`,
   ]
@@ -57,7 +60,7 @@ function Row({ item }: { item: Item }) {
         </span>
         <span className="min-w-0">
           <span className="block truncate font-medium">{sessionName(item.s)}</span>
-          <span className="tabular block truncate text-xs text-muted">{sessionLine(item.s, settings.units) || 'No details yet'}</span>
+          <span className="tabular block truncate text-xs text-muted">{sessionLine(item.s, settings) || 'No details yet'}</span>
         </span>
       </Link>
     )

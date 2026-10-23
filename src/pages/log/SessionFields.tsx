@@ -23,11 +23,12 @@ import {
   weightUnit,
   type PaceKind,
 } from '../../log/format'
+import { AimToggle } from '../../components/targets'
 import { useLog, type SessionDraft } from '../../log/LogStore'
 import { findMax } from '../../log/stats'
 import { FEEL_TAGS, MAIN_LIFTS, RPE_LABELS, SPORTS, WOD_FORMATS } from '../../log/sports'
 import { exerciseStats, sessionLoad, summarisePieces } from '../../log/stats'
-import type { ExerciseEntry, Piece, Sport, StrengthSet, Wod } from '../../log/types'
+import type { Aim, ExerciseEntry, Piece, Sport, StrengthSet, Wod } from '../../log/types'
 import { useSettings } from '../../settings/SettingsContext'
 
 type Patch = (p: Partial<SessionDraft>) => void
@@ -100,13 +101,14 @@ function PiecesEditor({ sport, pieces, onChange }: { sport: Sport; pieces: Piece
   const [targetDist, setTargetDist] = useState<number | undefined>()
   const [targetSec, setTargetSec] = useState<number | undefined>()
   const [rest, setRest] = useState<number | undefined>()
+  const [aim, setAim] = useState<Aim>({})
 
   const set = (i: number, patch: Partial<Piece>) => onChange(pieces.map((p, j) => (j === i ? { ...p, ...patch } : p)))
   const summary = summarisePieces(pieces, sport, kind)
 
   const generate = () => {
     if (!count) return
-    const made = Array.from({ length: count }, () => ({ id: newId(), distanceM: targetDist, durationSec: targetSec, restSec: rest }))
+    const made = Array.from({ length: count }, () => ({ id: newId(), distanceM: targetDist, durationSec: targetSec, restSec: rest, ...aim }))
     onChange([...pieces, ...made])
   }
 
@@ -133,6 +135,7 @@ function PiecesEditor({ sport, pieces, onChange }: { sport: Sport; pieces: Piece
             </button>
           </div>
         </div>
+        <AimToggle sport={sport} value={aim} onChange={setAim} label="Add a target for the set" />
       </div>
 
       {pieces.map((p, i) => {
@@ -185,6 +188,7 @@ function PiecesEditor({ sport, pieces, onChange }: { sport: Sport; pieces: Piece
               </Field>
             </div>
             <input className={`${inputClass} mt-2`} placeholder="Notes for this piece" value={p.notes ?? ''} onChange={(e) => set(i, { notes: e.target.value || undefined })} />
+            <AimToggle sport={sport} value={p} onChange={(a) => set(i, { target: a.target, hrZone: a.hrZone, targetRate: a.targetRate })} />
           </div>
         )
       })}
@@ -192,7 +196,11 @@ function PiecesEditor({ sport, pieces, onChange }: { sport: Sport; pieces: Piece
       <div className="flex flex-wrap items-center justify-between gap-3">
         <button
           type="button"
-          onClick={() => onChange([...pieces, { id: newId(), ...(pieces.length ? { distanceM: pieces.at(-1)!.distanceM, restSec: pieces.at(-1)!.restSec } : {}) }])}
+          onClick={() => {
+            const last = pieces.at(-1)
+            const carry = last ? { distanceM: last.distanceM, restSec: last.restSec, target: last.target, hrZone: last.hrZone, targetRate: last.targetRate } : {}
+            onChange([...pieces, { id: newId(), ...carry }])
+          }}
           className="inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-2 text-sm font-semibold hover:bg-surface-2"
         >
           <Plus className="size-4" /> Add piece
@@ -462,6 +470,15 @@ export function SessionFields({ draft, onChange, leg = false }: { draft: Session
           </Field>
         )}
       </div>
+
+      {moving && draft.sport !== 'other' && (
+        <AimToggle
+          sport={draft.sport}
+          value={draft}
+          onChange={(a) => onChange({ target: a.target, hrZone: a.hrZone, targetRate: a.targetRate })}
+          label="Add a session target (e.g. Z2, r18)"
+        />
+      )}
 
       <Field label="Effort (RPE)" hint={load != null ? `Session load ${load} (RPE × minutes)` : 'Session load = RPE × minutes, once duration is in.'}>
         <Scale value={draft.rpe} onChange={(rpe) => onChange({ rpe })} low="Very easy" high="Max" describe={(v) => RPE_LABELS[v]} />

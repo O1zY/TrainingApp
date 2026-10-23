@@ -6,8 +6,31 @@ export type Sport = 'row' | 'erg' | 'run' | 'bike' | 'swim' | 'strength' | 'reco
 export type SessionStatus = 'completed' | 'planned' | 'skipped'
 export type SessionSource = 'manual' | 'strava'
 
+/** Metrics a rep or session can be targeted on. */
+export type TargetMetric = 'pace' | 'power' | 'hr' | 'rate'
+
+/**
+ * A target in base units: pace in seconds per km for every sport (shown as /500m,
+ * /100m, /km, /mi or speed depending on sport), watts, bpm, strokes or rpm per minute.
+ * Either bound can be open: "1:40/500m or faster" is { metric: 'pace', max: 200 }.
+ */
+export interface Target {
+  metric: TargetMetric
+  min?: number
+  max?: number
+}
+
+/** What a rep or session was meant to be. Shared by logged sessions and library workouts. */
+export interface Aim {
+  target?: Target
+  /** Heart-rate zone 1–5, checked against the zones in Settings. */
+  hrZone?: number
+  /** Stroke rate or cadence to hold. Shown alongside the actual, not graded. */
+  targetRate?: number
+}
+
 /** One work interval, with the rest that followed it. */
-export interface Piece {
+export interface Piece extends Aim {
   id: string
   distanceM?: number
   durationSec?: number
@@ -49,7 +72,7 @@ export interface Wod {
   rx?: boolean
 }
 
-export interface Session {
+export interface Session extends Aim {
   id: string
   sport: Sport
   /** Sport-specific session type, e.g. 'intervals', 'steady'. */
@@ -87,6 +110,8 @@ export interface Session {
   /** Strava activity id once imports exist. */
   externalId?: string
   multisportId?: string
+  /** Library workout this session was logged from. */
+  workoutId?: string
 
   createdAt: string
   updatedAt: string
@@ -132,4 +157,53 @@ export interface OneRepMax {
   exercise: string
   kg: number
   date: string
+}
+
+// ---- Library ------------------------------------------------------------
+
+/** A rep in a library workout: the fixed part (distance or time), rest and what to aim for. */
+export interface PieceTemplate extends Aim {
+  id: string
+  distanceM?: number
+  durationSec?: number
+  restSec?: number
+  notes?: string
+}
+
+/** A planned set: a % of the lifter's current 1RM, or a fixed weight. */
+export interface SetTemplate {
+  id: string
+  reps?: number
+  pct?: number
+  weightKg?: number
+  rpe?: number
+  warmup?: boolean
+}
+
+export interface ExerciseTemplate {
+  id: string
+  name: string
+  sets: SetTemplate[]
+  notes?: string
+}
+
+/** A reusable session in the library. Logging from it pre-fills a Session. */
+export interface Workout extends Aim {
+  id: string
+  name: string
+  sport: Sport
+  type?: string
+  description?: string
+  tags: string[]
+  /** Whole-session plan, mainly for steady work, e.g. 60′ in Z2 at r18. */
+  durationSec?: number
+  distanceM?: number
+  rpe?: number
+  pieces?: PieceTemplate[]
+  exercises?: ExerciseTemplate[]
+  wod?: Pick<Wod, 'format' | 'description' | 'timeCapSec'>
+  /** Where it comes from: a paper, coach, book or link. */
+  source?: string
+  createdAt: string
+  updatedAt: string
 }

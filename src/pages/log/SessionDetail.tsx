@@ -1,6 +1,7 @@
 import { ArrowLeft, HeartPulse, Pencil, Plus, Repeat, Trash2, Waypoints } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
+import { RepStrip } from '../../components/targets'
 import { Card } from '../../components/ui'
 import {
   PACE_LABEL,
@@ -20,6 +21,7 @@ import {
 import { useLog } from '../../log/LogStore'
 import { MULTISPORT_KINDS, RPE_LABELS, SPORTS, WOD_FORMATS, sessionName } from '../../log/sports'
 import { exerciseStats, pieceWatts, sessionLoad, summarisePieces } from '../../log/stats'
+import { STATUS_LABEL, checkTarget, checkZone, describeAim, describeTarget, statusColor } from '../../log/targets'
 import type { Session } from '../../log/types'
 import { useSettings } from '../../settings/SettingsContext'
 import { WellbeingSummary } from './Wellbeing'
@@ -63,6 +65,45 @@ export function SessionStats({ s }: { s: Session }) {
   )
 }
 
+/** Whole-session target (e.g. steady state in Z2 at r18) and how it went. */
+function AimResult({ s }: { s: Session }) {
+  const { settings } = useSettings()
+  if (!s.target && !s.hrZone && !s.targetRate) return null
+  const a = checkTarget(s, s.sport)
+  const z = checkZone(s, settings.hrZoneTops, s.sport)
+  const row = (label: string, aim: string, result?: { status: keyof typeof STATUS_LABEL; off: number }, color?: string) => (
+    <div className="flex items-center justify-between gap-3 py-2 text-sm">
+      <span>
+        <span className="text-muted">{label}</span> <span className="font-semibold">{aim}</span>
+      </span>
+      {result ? (
+        <span className="font-semibold" style={{ color }}>
+          {STATUS_LABEL[result.status]}
+          {result.off > 0 && ` · ${(result.off * 100).toFixed(1)}% off`}
+        </span>
+      ) : (
+        <span className="text-muted">No data to check</span>
+      )}
+    </div>
+  )
+  return (
+    <Card title="Target">
+      <div className="divide-y divide-line">
+        {s.target && row('Aim', describeTarget(s.target, s.sport, settings.units), a, statusColor(a))}
+        {s.hrZone && row('HR zone', `Z${s.hrZone}${s.hrAvg ? ` · avg ${s.hrAvg}` : ''}`, z, statusColor(z))}
+        {s.targetRate && (
+          <div className="flex items-center justify-between py-2 text-sm">
+            <span>
+              <span className="text-muted">Rate</span> <span className="font-semibold">r{s.targetRate}</span>
+            </span>
+            <span className="tabular font-semibold">{s.rate != null ? `actual r${s.rate}` : '—'}</span>
+          </div>
+        )}
+      </div>
+    </Card>
+  )
+}
+
 function Zones({ zones }: { zones: (number | undefined)[] }) {
   const total = zones.reduce<number>((a, z) => a + (z ?? 0), 0)
   if (!total) return null
@@ -96,11 +137,16 @@ function PiecesTable({ s }: { s: Session }) {
   const showRate = pieces.some((p) => p.rate != null)
   const showHr = pieces.some((p) => p.hrAvg != null || p.hrMax != null)
   const showRest = pieces.some((p) => p.restSec != null)
+  const showAim = pieces.some((p) => p.target || p.hrZone || p.targetRate)
+  const tops = settings.hrZoneTops
   const th = 'px-2 py-2 text-left text-xs font-medium text-muted'
   const td = 'tabular px-2 py-2'
 
   return (
     <Card title={`Pieces · ${pieces.length}`}>
+      <div className="mb-4">
+        <RepStrip pieces={pieces} sport={s.sport} />
+      </div>
       <div className="-mx-1 overflow-x-auto">
         <table className="w-full min-w-[28rem] text-sm">
           <thead>
@@ -113,27 +159,36 @@ function PiecesTable({ s }: { s: Session }) {
               {showWatts && <th className={th}>W</th>}
               {showHr && <th className={th}>HR</th>}
               {showRest && <th className={th}>Rest</th>}
+              {showAim && <th className={th}>Target</th>}
             </tr>
           </thead>
           <tbody>
             {pieces.map((p, i) => {
               const pace = kind ? paceValue(kind, p.distanceM, p.durationSec) : undefined
               const w = pieceWatts(p, s.sport)
+              const a = checkTarget(p, s.sport)
+              const tint = (m: string) => (p.target?.metric === m ? { color: statusColor(a) } : undefined)
+              const z = checkZone(p, tops, s.sport)
               return (
                 <tr key={p.id} className={`border-b border-line/60 ${sum.fastest === i ? 'bg-accent-soft/60' : ''}`}>
                   <td className={`${td} font-semibold`}>{i + 1}</td>
                   <td className={td}>{p.distanceM != null ? `${formatDistance(p.distanceM, unit)}${unit}` : '—'}</td>
                   <td className={td}>{formatTime(p.durationSec) || '—'}</td>
-                  {kind && <td className={`${td} font-semibold`}>{formatPace(kind, pace) || '—'}</td>}
-                  {showRate && <td className={td}>{p.rate ?? '—'}</td>}
-                  {showWatts && <td className={td}>{w ?? '—'}</td>}
+                  {kind && <td className={`${td} font-semibold`} style={tint('pace')}>{formatPace(kind, pace) || '—'}</td>}
+                  {showRate && <td className={td} style={tint('rate')}>{p.rate ?? '—'}</td>}
+                  {showWatts && <td className={td} style={tint('power')}>{w ?? '—'}</td>}
                   {showHr && (
                     <td className={td}>
-                      {p.hrAvg ?? '—'}
+                      <span style={p.target?.metric === 'hr' ? tint('hr') : { color: statusColor(z) }}>{p.hrAvg ?? '—'}</span>
                       {p.hrMax != null && <span className="text-muted"> / {p.hrMax}</span>}
                     </td>
                   )}
                   {showRest && <td className={td}>{i < pieces.length - 1 ? formatTime(p.restSec) || '—' : ''}</td>}
+                  {showAim && (
+                    <td className={`${td} whitespace-nowrap text-xs text-muted`} title={a ? STATUS_LABEL[a.status] : undefined}>
+                      {describeAim(p, s.sport, settings.units) || '—'}
+                    </td>
+                  )}
                 </tr>
               )
             })}
@@ -146,11 +201,12 @@ function PiecesTable({ s }: { s: Session }) {
               {showWatts && <td className={td}>{sum.avgWatts != null ? Math.round(sum.avgWatts) : '—'}</td>}
               {showHr && <td className={td}>{sum.avgHr != null ? Math.round(sum.avgHr) : '—'}{sum.maxHr != null && <span className="text-muted"> / {sum.maxHr}</span>}</td>}
               {showRest && <td className={td}>{formatTime(sum.restSec) || '—'}</td>}
+              {showAim && <td className={td} />}
             </tr>
           </tbody>
         </table>
       </div>
-      <p className="mt-2 text-xs text-muted">Bottom row: totals, with averages for pace, rate, watts and HR. Highlighted row is the fastest piece.</p>
+      <p className="mt-2 text-xs text-muted">Bottom row: totals, with averages for pace, rate, watts and HR. Highlighted row is the fastest piece. Coloured values are graded against their target.</p>
       {pieces.some((p) => p.notes) && (
         <ul className="mt-3 space-y-1 text-sm">
           {pieces.map((p, i) => p.notes && <li key={p.id}><span className="font-semibold">#{i + 1}</span> {p.notes}</li>)}
@@ -281,6 +337,7 @@ export default function SessionDetail() {
       )}
 
       <SessionStats s={s} />
+      <AimResult s={s} />
 
       {(s.feel?.length || s.notes) && (
         <Card>

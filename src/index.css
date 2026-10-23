@@ -25,6 +25,12 @@
   --sport-strength: #7c3aed;
   --sport-recovery: #0e9f9f;
 
+  /* Target status: on target / harder than asked / missed (shades near → far). */
+  --hit: #0f9d76;
+  --over: #c27c0e;
+  --miss-near: #e8837c;
+  --miss-far: #8e1212;
+
   color-scheme: light;
 }
 
@@ -47,6 +53,11 @@
   --sport-strength: #a78bfa;
   --sport-recovery: #2dd4bf;
 
+  --hit: #34d399;
+  --over: #fbbf24;
+  --miss-near: #fecaca;
+  --miss-far: #ef3333;
+
   color-scheme: dark;
 }
 
@@ -67,6 +78,9 @@
   --color-sport-swim: var(--sport-swim);
   --color-sport-strength: var(--sport-strength);
   --color-sport-recovery: var(--sport-recovery);
+  --color-hit: var(--hit);
+  --color-over: var(--over);
+  --color-miss: var(--miss-far);
 
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
