@@ -338,7 +338,7 @@ function planWeek(input: PlanInput, week: PlanWeek, notes: string[]): PlannedSes
     day.sessions.push({ intensity: slot.intensity, sport: slot.sport, from: at.start, to: at.start + at.sec / 60 })
     day.free = take(day.free, at.start, at.start + at.sec / 60)
     const oneOff = at.shortened && f.oneOff?.durationSec ? { ...f.oneOff, durationSec: at.sec } : f.oneOff
-    out.push(toPlanned(block, { ...f, oneOff, durationSec: at.sec }, day, at, reasonFor(day, at, slot)))
+    out.push(toPlanned(block, { ...f, oneOff, durationSec: at.sec }, day, at, reasonFor(day, at, slot, prefs)))
   }
   return out
 }
@@ -385,12 +385,18 @@ function placement(day: Day, f: Filled): Placement | undefined {
 const roundUp = (m: number) => Math.ceil(m / 15) * 15
 const roundDown = (m: number) => Math.floor(m / 15) * 15
 
-function reasonFor(day: Day, at: Placement, slot: Slot) {
+function reasonFor(day: Day, at: Placement, slot: Slot, prefs: PlanPrefs) {
   const l = day.load
   const parts: string[] = []
+  const travel = prefs.commuteMin ? `${prefs.commuteMin}′ travel` : ''
+  const gap = prefs.gapMin ? `${prefs.gapMin}′ to refuel` : ''
   if (at.slot === 'off') parts.push(l.commitments.length ? 'No work today' : 'Day off')
-  else if (at.slot === 'before' && l.workStart != null) parts.push(`Before your ${minClock(l.workStart)} start`)
-  else if (l.workEnd != null) parts.push(`After work (finish ${minClock(l.workEnd)})`)
+  else if (at.slot === 'before' && l.workStart != null) {
+    const end = minClock(at.start + at.sec / 60)
+    parts.push(`Before your ${minClock(l.workStart)} start: done by ${end}${gap || travel ? `, then ${[gap, travel].filter(Boolean).join(' and ')}` : ''}`)
+  } else if (l.workEnd != null) {
+    parts.push(`After work (finish ${minClock(l.workEnd)})${travel || gap ? `: ${[travel && `${travel} home`, gap].filter(Boolean).join(' and ')} first` : ''}`)
+  }
   if (slot.intensity === 'key') parts.push(l.strain === 'low' ? 'light day for a hard session' : 'least-loaded day left for a hard session')
   if (slot.long) parts.push(at.slot === 'off' ? 'most free time for the long one' : 'long one fitted around work')
   if (l.night) parts.push('night shift nearby: kept easy where possible')

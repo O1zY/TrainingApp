@@ -1,5 +1,6 @@
 import { Briefcase, Check, Clock, Flag, Plane, Plus, Repeat } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { Field, NumberInput } from '../../components/fields'
 import { formatPlanTime } from '../../library/workouts'
 import { formatDate, todayIso } from '../../log/format'
 import { useLog } from '../../log/LogStore'
@@ -9,7 +10,7 @@ import { INTENSITY_LABEL } from '../../plan/generate'
 import { raceLabel } from '../../plan/events'
 import { DEMANDS, describeDay, type DayLoad, type Strain } from '../../plan/load'
 import { loggedFor } from '../../plan/planned'
-import type { Commitment, Intensity, PlanEvent, PlannedSession } from '../../plan/types'
+import type { Commitment, Intensity, PlanEvent, PlanPrefs, PlannedSession } from '../../plan/types'
 
 const INTENSITY_STYLE: Record<Intensity, string> = {
   easy: 'bg-surface-2 text-muted',
@@ -92,6 +93,28 @@ export function EventLine({ e }: { e: PlanEvent }) {
       <span className="truncate">{e.name}</span>
       {e.kind === 'race' && <span className="shrink-0 text-xs text-muted">{raceLabel(e)}</span>}
     </Link>
+  )
+}
+
+type Workday = Pick<PlanPrefs, 'commuteMin' | 'gapMin'>
+
+/** Travel to work and the refuel gap kept either side of every shift. */
+export function WorkdayFields({ value, onChange }: { value: Workday; onChange: (v: Workday) => void }) {
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Travel to work" unit="min each way">
+          <NumberInput integer value={value.commuteMin} onChange={(v) => onChange({ ...value, commuteMin: Math.min(180, v ?? 0) })} />
+        </Field>
+        <Field label="Refuel gap" unit="min">
+          <NumberInput integer value={value.gapMin} onChange={(v) => onChange({ ...value, gapMin: Math.min(120, v ?? 0) })} />
+        </Field>
+      </div>
+      <p className="text-xs text-muted">
+        Kept clear either side of every shift: a session before work finishes {value.gapMin + value.commuteMin}′ before you start (time to shower and refuel, then
+        travel), and one after work starts {value.commuteMin + value.gapMin}′ after you finish (travel home, then eat and settle).
+      </p>
+    </div>
   )
 }
 

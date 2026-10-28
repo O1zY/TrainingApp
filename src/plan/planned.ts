@@ -6,7 +6,7 @@ import type { OneRepMax, Session, Workout } from '../log/types'
 import { addDays } from './dates'
 import { planBlock } from './generate'
 import { usePlan } from './PlanStore'
-import type { Block, Commitment, PlanEvent, PlannedSession } from './types'
+import type { Block, Commitment, PlanEvent, PlanPrefs, PlannedSession } from './types'
 
 /** The workout behind a planned session: its library workout, or its one-off in the same shape. */
 export function plannedWorkout(p: PlannedSession, workouts: Workout[]): Workout | undefined {
@@ -33,7 +33,7 @@ export const blockEnd = (b: Pick<Block, 'start' | 'weeks'>) => addDays(b.start, 
 export function useReplan() {
   const plan = usePlan()
   const { workouts, sessions } = useLog()
-  return (fresh: { blocks?: Block[]; events?: PlanEvent[]; commitments?: Commitment[] } = {}) => {
+  return (fresh: { blocks?: Block[]; events?: PlanEvent[]; commitments?: Commitment[]; prefs?: PlanPrefs } = {}) => {
     const today = todayIso()
     const logged = new Set(sessions.map((s) => s.planId).filter(Boolean))
     const keep = (p: PlannedSession) => p.date < today || !!p.locked || logged.has(p.id)
@@ -47,7 +47,7 @@ export function useReplan() {
         block,
         events: fresh.events ?? plan.events,
         commitments: fresh.commitments ?? plan.commitments,
-        prefs: plan.prefs,
+        prefs: fresh.prefs ?? plan.prefs,
         workouts,
         fixed,
         from,

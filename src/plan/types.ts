@@ -121,8 +121,15 @@ export interface Commitment {
 }
 
 export interface PlanPrefs {
-  /** Added each side of a work shift. */
+  /** Travel to work, each way. */
   commuteMin: number
+  /**
+   * Gap kept between training and travel, either side of a shift: to shower and refuel
+   * after a session before leaving, and to eat and settle after getting home before training.
+   */
+  gapMin: number
+  /** Asked when building a block; until then the defaults are assumed. */
+  workdaySet?: boolean
   /** Training day window: nothing is suggested earlier or later than this. */
   dayStart: string
   dayEnd: string

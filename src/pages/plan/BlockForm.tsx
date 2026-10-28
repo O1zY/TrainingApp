@@ -16,6 +16,7 @@ import { loggedFor, useReplan } from '../../plan/planned'
 import { usePlan, type BlockDraft } from '../../plan/PlanStore'
 import type { BlockSport } from '../../plan/types'
 import { useSettings } from '../../settings/SettingsContext'
+import { WorkdayFields } from './bits'
 
 const PLAN_SPORTS: Sport[] = ['erg', 'row', 'run', 'bike', 'swim', 'strength', 'recovery']
 
@@ -83,7 +84,8 @@ function SportRow({ value, onChange, onRemove }: { value: BlockSport; onChange: 
 }
 
 function Form({ initial, editing }: { initial: BlockDraft; editing: boolean }) {
-  const { saveBlock, deleteBlock, events } = usePlan()
+  const { saveBlock, deleteBlock, events, prefs, updatePrefs } = usePlan()
+  const [workday, setWorkday] = useState({ commuteMin: prefs.commuteMin, gapMin: prefs.gapMin })
   const { workouts, sessions } = useLog()
   const { settings } = useSettings()
   const replan = useReplan()
@@ -101,7 +103,9 @@ function Form({ initial, editing }: { initial: BlockDraft; editing: boolean }) {
   const submit = (e: FormEvent) => {
     e.preventDefault()
     const saved = saveBlock({ ...draft, name: draft.name.trim() || 'Training block', start: weekStart(draft.start, settings.weekStartsOn) })
-    replan({ blocks: [saved] })
+    const nextPrefs = { ...prefs, ...workday, workdaySet: true }
+    updatePrefs(nextPrefs)
+    replan({ blocks: [saved], prefs: nextPrefs })
     navigate(`/plan?block=${saved.id}`, { replace: editing })
   }
 
@@ -223,6 +227,11 @@ function Form({ initial, editing }: { initial: BlockDraft; editing: boolean }) {
           </FieldGroup>
           <Toggle checked={draft.doubles} onChange={(doubles) => patch({ doubles })} label="Allow two sessions in a day (e.g. lifting on a hard erg day)" />
         </div>
+      </Card>
+
+      <Card title="Your working day">
+        <p className="mb-3 text-sm text-muted">How long it takes you to get to work, and how much time to leave between training and a shift. Shifts themselves go in Plan › Work & calendar.</p>
+        <WorkdayFields value={workday} onChange={setWorkday} />
       </Card>
 
       <Card title="Library and one-offs">

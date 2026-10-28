@@ -3,6 +3,7 @@ import type { Commitment, PlanPrefs } from './types'
 
 export const DEFAULT_PREFS: PlanPrefs = {
   commuteMin: 20,
+  gapMin: 30,
   dayStart: '06:00',
   dayEnd: '21:30',
   defaultDemand: 'physical',

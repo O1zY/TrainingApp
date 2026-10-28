@@ -12,7 +12,7 @@ import { mergeImported } from '../../plan/data'
 import { usePlan } from '../../plan/PlanStore'
 import type { Commitment, Demand } from '../../plan/types'
 import { useSettings } from '../../settings/SettingsContext'
-import { StrainDot } from './bits'
+import { StrainDot, WorkdayFields } from './bits'
 
 const draftId = (c: CommitmentDraft, i: number): Commitment => ({ ...c, id: `new-${i}` })
 
@@ -220,6 +220,32 @@ function IcsImport() {
   )
 }
 
+function WorkingDay() {
+  const { prefs, updatePrefs } = usePlan()
+  const replan = useReplan()
+  const [value, setValue] = useState({ commuteMin: prefs.commuteMin, gapMin: prefs.gapMin })
+  const [saved, setSaved] = useState(false)
+  const changed = value.commuteMin !== prefs.commuteMin || value.gapMin !== prefs.gapMin || !prefs.workdaySet
+  const save = () => {
+    const next = { ...prefs, ...value, workdaySet: true }
+    updatePrefs(next)
+    replan({ prefs: next })
+    setSaved(true)
+  }
+  return (
+    <Card title="Your working day">
+      <WorkdayFields value={value} onChange={(v) => { setValue(v); setSaved(false) }} />
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <button type="button" disabled={!changed} onClick={save} className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-on-accent hover:opacity-90 disabled:opacity-50">
+          Save and re-plan
+        </button>
+        {saved && <p className="text-sm text-muted">Saved. Sessions around your shifts have been re-fitted.</p>}
+        {!prefs.workdaySet && !saved && <p className="text-sm text-muted">Using {prefs.commuteMin}′ travel and a {prefs.gapMin}′ gap until you set your own.</p>}
+      </div>
+    </Card>
+  )
+}
+
 function ImportSettings() {
   const { prefs, updatePrefs } = usePlan()
   const [keywords, setKeywords] = useState(prefs.workKeywords.join(', '))
@@ -238,10 +264,7 @@ function ImportSettings() {
         <FieldGroup label="Imported shifts are" hint={DEMANDS[prefs.defaultDemand].hint}>
           <Chips<Demand> value={prefs.defaultDemand} options={DEMAND_OPTIONS} onChange={(v) => v && updatePrefs({ defaultDemand: v })} allowNone={false} />
         </FieldGroup>
-        <div className="grid grid-cols-3 gap-3">
-          <Field label="Commute" unit="min each way">
-            <NumberInput integer value={prefs.commuteMin} onChange={(v) => updatePrefs({ commuteMin: Math.min(180, v ?? 0) })} />
-          </Field>
+        <div className="grid grid-cols-2 gap-3">
           <Field label="Train from">
             <input type="time" className={inputClass} value={prefs.dayStart} onChange={(e) => e.target.value && updatePrefs({ dayStart: e.target.value })} />
           </Field>
@@ -342,6 +365,7 @@ export default function Work() {
       />
       <div className="grid gap-5 lg:grid-cols-2">
         <div className="space-y-5">
+          <WorkingDay />
           <AddShift />
           <GoogleCalendar />
           <IcsImport />

@@ -32,7 +32,7 @@ export interface DayLoad {
   night: boolean
   /** Ten hours or more of work. */
   long: boolean
-  /** Time taken up, in minutes after midnight, with the commute either side of work. */
+  /** Time taken up, in minutes after midnight, with travel and a refuel gap either side of work. */
   busy: [number, number][]
   /** Gaps of 20′ or more inside the training day window. */
   free: [number, number][]
@@ -64,7 +64,9 @@ export function dayLoad(date: string, all: Commitment[], prefs: PlanPrefs): DayL
   const busy: [number, number][] = []
   let workStart: number | undefined
   let workEnd: number | undefined
-  const pad = (c: Commitment) => (c.kind === 'work' ? prefs.commuteMin : 0)
+  // Either side of a shift: the journey, plus time to refuel after training before leaving
+  // or to eat and settle after getting home before training.
+  const pad = (c: Commitment) => (c.kind === 'work' ? prefs.commuteMin + prefs.gapMin : 0)
 
   for (const c of today) {
     const s = clockMin(c.start)
