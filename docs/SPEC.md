@@ -23,7 +23,7 @@ part training tool (plan programmes, reuse sessions, analyse progress) across ev
 1. **App shell + navigation** ✅ — layout, theme tokens, sidebar (laptop) / tab bar (phone), dashboard skeleton, settings
 2. **Session logging** ✅ — fast entry per sport, sport-specific fields, RPE/notes
 3. **Session library** ✅ — reusable workouts/templates, log-from-template
-4. **Programme planner** — blocks → weeks → sessions, target races, schedule
+4. **Programme planner** ✅ — blocks → weeks → sessions, target races, schedule around work
 5. **Analysis** — training load, PBs, planned vs completed, per-sport trends
 6. **Strava import** — OAuth + activity sync, dedupe against manual logs
 7. **Link to existing project** — scope decided at that point
@@ -66,9 +66,24 @@ rep drift. HR zones live in Settings (max HR, editable zone tops, default 60/70/
 | Save to library | Any logged session → its structure and targets (not results) |
 | History | Each workout lists the sessions logged from it, for comparing attempts and later planned-vs-done |
 
+## Programme planner decisions (agreed 28 Oct 2026)
+
+| Topic | Decision |
+|---|---|
+| Storage | localStorage, `tt-plan-v1`; `src/plan/PlanStore.tsx` is the only file that touches it |
+| Cycle | 3 build weeks + 1 deload by default (2:1 and 4:1 selectable). Build weeks add volume (default +8%/week); deload at 60% with one test. Logic: `src/plan/cycle.ts` |
+| Races | A: taper week before, race week, recovery week after, rhythm restarts. B: lighter race week, rhythm carries on. C: trained through, replaces a hard session. A deload due the week before a taper is skipped |
+| Events | Away 4+ days in a week makes it the deload (rhythm restarts). Busy spells keep hard sessions off those days. Any week's type can be set by hand |
+| Session mix | Benchmark library workouts recur at the same build week and slot every cycle, so attempts compare. Tests (type Test or #test) close each deload. The rest is a seeded mix of other library workouts (block's library %, default 40) and one-offs from `src/plan/oneOffs.ts`, which rotate weekly and scale with week volume. Library workouts are never scaled |
+| Outside load | Shifts have a demand level (desk 5, on feet 15, physical 25, heavy 35 load units/hour, plus penalties for early, late, night and 10h+ shifts). Hard sessions go on the least-loaded days, not back to back, not before races; before work if the morning allows, otherwise after (with commute). Easy sessions shorten to fit. 45h+/55h+ work weeks drop 1/2 easy sessions and cut easy volume. Starting heuristics in `src/plan/load.ts`, for the coaching feature to tune |
+| Calendars | Manual shifts (with weekly repeat), .ics import (daily/weekly repeats expanded) and read-only Google Calendar sync in the browser (needs `VITE_GOOGLE_CLIENT_ID`, see `.env.example`). Titles matching work keywords become shifts; the rest is busy time. Edits to imported items survive re-syncs |
+| Re-planning | Automatic after saving shifts, events or the block; by hand from Plan. Logged, past, moved or edited sessions are never replaced |
+| Logging | `/log/new?plan=id` pre-fills from the planned workout; the session keeps `planId` for planned vs done in Analysis |
+
 ## Parked for later (noted 23 Oct 2026)
 
 - **Garmin import** for the morning check-in (no personal-use API); revisit later.
+- **Outward calendar sync.** Writing planned sessions back into Google Calendar.
 - **Adaptive coaching.** The miss thresholds in `src/log/targets.ts` are a flat start. A later coaching
   feature should learn from logged sessions and check-ins and adjust how strictly reps are judged:
   harsher when there's room to push, more forgiving after poor sleep, high soreness or a fading block.
