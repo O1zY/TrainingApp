@@ -112,6 +112,8 @@ export interface Session extends Aim {
   multisportId?: string
   /** Library workout this session was logged from. */
   workoutId?: string
+  /** Planned session this was logged against, for planned vs done. */
+  planId?: string
 
   createdAt: string
   updatedAt: string

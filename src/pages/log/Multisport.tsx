@@ -1,6 +1,6 @@
 import { ArrowDown, ArrowLeft, ArrowLeftRight, ArrowUp, Link2, Pencil, Plus, Trash2, Unlink } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
-import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Chips, Field, TextArea, TextInput, Toggle, inputClass } from '../../components/fields'
 import { Card, PageHeader } from '../../components/ui'
 import { clockToSec, distanceUnit, formatDate, formatDistance, formatTime, newId, secToClock, todayIso } from '../../log/format'
@@ -213,11 +213,14 @@ function Form({ initialEvent, initialLegs, editing }: { initialEvent: EventDraft
 }
 
 export function NewMultisport() {
-  const date = todayIso()
+  const [params] = useSearchParams()
+  const date = params.get('date') ?? todayIso()
+  const kind = MULTISPORT_KINDS.find((k) => k.value === params.get('kind')) ?? MULTISPORT_KINDS[0]
+  const title = params.get('title') ?? undefined
   return (
     <>
       <PageHeader title="Log multisport" subtitle="Each leg is its own session, linked together. Transitions are worked out from finish and start times if you don’t log them." />
-      <Form initialEvent={{ kind: 'duathlon', date }} initialLegs={MULTISPORT_KINDS[0].legs.map((s) => legFor(s, date))} editing={false} />
+      <Form key={params.toString()} initialEvent={{ kind: kind.value, date, title, race: params.has('title') || undefined }} initialLegs={kind.legs.map((s) => legFor(s, date))} editing={false} />
     </>
   )
 }
