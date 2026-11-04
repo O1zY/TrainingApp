@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Card, PageHeader, Segmented } from '../components/ui'
+import { StravaConnection } from './log/Strava'
 import { zonesFromMax } from '../settings/hrZones'
 import { useSettings, type ThemePref, type Units } from '../settings/SettingsContext'
 
@@ -109,8 +110,8 @@ export default function Settings() {
           </div>
         </Card>
 
-        <Card title="Connections">
-          <p className="text-sm text-muted">Strava import will be set up here in section 6.</p>
+        <Card title="Strava">
+          <StravaConnection />
         </Card>
       </div>
     </>

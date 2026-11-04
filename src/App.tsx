@@ -19,6 +19,8 @@ import PlannedDetail, { EditPlanned, NewPlanned } from './pages/plan/PlannedDeta
 import Work from './pages/plan/Work'
 import { PlanProvider } from './plan/PlanStore'
 import Settings from './pages/Settings'
+import StravaPage, { StravaCallback } from './pages/log/Strava'
+import { StravaProvider } from './strava/StravaStore'
 import { SettingsProvider } from './settings/SettingsContext'
 
 export default function App() {
@@ -26,46 +28,50 @@ export default function App() {
     <SettingsProvider>
       <LogProvider>
         <PlanProvider>
-          <BrowserRouter>
-            <Routes>
-              <Route element={<AppShell />}>
-                <Route index element={<Home />} />
-                <Route path="plan">
-                  <Route index element={<PlanHome />} />
-                  <Route path="block/new" element={<NewBlock />} />
-                  <Route path="block/:id/edit" element={<EditBlock />} />
-                  <Route path="work" element={<Work />} />
-                  <Route path="events" element={<Events />} />
-                  <Route path="events/new" element={<NewEvent />} />
-                  <Route path="events/:id/edit" element={<EditEvent />} />
-                  <Route path="session/new" element={<NewPlanned />} />
-                  <Route path="session/:id" element={<PlannedDetail />} />
-                  <Route path="session/:id/edit" element={<EditPlanned />} />
+          <StravaProvider>
+            <BrowserRouter>
+              <Routes>
+                <Route element={<AppShell />}>
+                  <Route index element={<Home />} />
+                  <Route path="plan">
+                    <Route index element={<PlanHome />} />
+                    <Route path="block/new" element={<NewBlock />} />
+                    <Route path="block/:id/edit" element={<EditBlock />} />
+                    <Route path="work" element={<Work />} />
+                    <Route path="events" element={<Events />} />
+                    <Route path="events/new" element={<NewEvent />} />
+                    <Route path="events/:id/edit" element={<EditEvent />} />
+                    <Route path="session/new" element={<NewPlanned />} />
+                    <Route path="session/:id" element={<PlannedDetail />} />
+                    <Route path="session/:id/edit" element={<EditPlanned />} />
+                  </Route>
+                  <Route path="log">
+                    <Route index element={<LogHome />} />
+                    <Route path="new" element={<NewSession />} />
+                    <Route path="session/:id" element={<SessionDetail />} />
+                    <Route path="session/:id/edit" element={<EditSession />} />
+                    <Route path="multi/new" element={<NewMultisport />} />
+                    <Route path="multi/:id" element={<MultisportDetail />} />
+                    <Route path="multi/:id/edit" element={<EditMultisport />} />
+                    <Route path="wellbeing/:date" element={<WellbeingDetail />} />
+                    <Route path="wellbeing/:date/edit" element={<WellbeingForm />} />
+                    <Route path="maxes" element={<Maxes />} />
+                    <Route path="strava" element={<StravaPage />} />
+                  </Route>
+                  <Route path="library">
+                    <Route index element={<LibraryHome />} />
+                    <Route path="new" element={<NewWorkout />} />
+                    <Route path=":id" element={<WorkoutDetail />} />
+                    <Route path=":id/edit" element={<EditWorkout />} />
+                  </Route>
+                  <Route path="analysis" element={<AnalysisHome />} />
+                  <Route path="settings" element={<Settings />} />
+                  <Route path="strava/callback" element={<StravaCallback />} />
+                  <Route path="*" element={<Navigate to="/" replace />} />
                 </Route>
-                <Route path="log">
-                  <Route index element={<LogHome />} />
-                  <Route path="new" element={<NewSession />} />
-                  <Route path="session/:id" element={<SessionDetail />} />
-                  <Route path="session/:id/edit" element={<EditSession />} />
-                  <Route path="multi/new" element={<NewMultisport />} />
-                  <Route path="multi/:id" element={<MultisportDetail />} />
-                  <Route path="multi/:id/edit" element={<EditMultisport />} />
-                  <Route path="wellbeing/:date" element={<WellbeingDetail />} />
-                  <Route path="wellbeing/:date/edit" element={<WellbeingForm />} />
-                  <Route path="maxes" element={<Maxes />} />
-                </Route>
-                <Route path="library">
-                  <Route index element={<LibraryHome />} />
-                  <Route path="new" element={<NewWorkout />} />
-                  <Route path=":id" element={<WorkoutDetail />} />
-                  <Route path=":id/edit" element={<EditWorkout />} />
-                </Route>
-                <Route path="analysis" element={<AnalysisHome />} />
-                <Route path="settings" element={<Settings />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Route>
-            </Routes>
-          </BrowserRouter>
+              </Routes>
+            </BrowserRouter>
+          </StravaProvider>
         </PlanProvider>
       </LogProvider>
     </SettingsProvider>

@@ -60,7 +60,10 @@ function Row({ item }: { item: Item }) {
         </span>
         <span className="min-w-0">
           <span className="block truncate font-medium">{sessionName(item.s)}</span>
-          <span className="tabular block truncate text-xs text-muted">{sessionLine(item.s, settings) || 'No details yet'}</span>
+          <span className="tabular block truncate text-xs text-muted">
+            {sessionLine(item.s, settings) || 'No details yet'}
+            {item.s.externalId && <span className="text-strava"> · Strava</span>}
+          </span>
         </span>
       </Link>
     )
