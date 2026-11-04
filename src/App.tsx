@@ -2,9 +2,11 @@ import { lazy, type ComponentType } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AppShell } from './layout/AppShell'
 import { LogProvider } from './log/LogStore'
+import { CalendarAutoPush } from './plan/CalendarAutoPush'
 import { PlanProvider } from './plan/PlanStore'
 import { SettingsProvider } from './settings/SettingsContext'
 import { StravaProvider } from './strava/StravaStore'
+import { SyncRunner } from './sync/runner'
 
 // Each page loads when first opened, so the first screen doesn't wait for every chart and form.
 // `pick` turns a named export into the default export lazy() wants.
@@ -54,6 +56,8 @@ export default function App() {
       <LogProvider>
         <PlanProvider>
           <StravaProvider>
+            {!!import.meta.env.VITE_GOOGLE_CLIENT_ID && <CalendarAutoPush />}
+            {!!import.meta.env.VITE_SUPABASE_URL && <SyncRunner />}
             <BrowserRouter>
               <Routes>
                 <Route element={<AppShell />}>

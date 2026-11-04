@@ -87,6 +87,14 @@ export function readJson<T>(key: string, parse: (saved: Record<string, unknown>)
   }
 }
 
+const writeListeners = new Set<(key: string) => void>()
+
+/** Hears about every successful save (sync uses it to know there's something to send). */
+export function onWrite(listener: (key: string) => void) {
+  writeListeners.add(listener)
+  return () => void writeListeners.delete(listener)
+}
+
 /** Writes a JSON value; false (and a reported problem) if the browser refused. */
 export function writeJson(key: string, value: unknown): boolean {
   const s = storage()
@@ -94,6 +102,7 @@ export function writeJson(key: string, value: unknown): boolean {
   try {
     s.setItem(key, JSON.stringify(value))
     clearWriteProblem(key)
+    writeListeners.forEach((l) => l(key))
     return true
   } catch {
     report({ key, kind: 'write' })
@@ -101,19 +110,59 @@ export function writeJson(key: string, value: unknown): boolean {
   }
 }
 
+/** Live stores in this tab, by key, so a value replaced from outside (sync) shows at once. */
+interface Mounted {
+  /** True while the store has a change not yet saved. */
+  unsaved: () => boolean
+  reload: () => void
+}
+const mounted = new Map<string, Set<Mounted>>()
+
+/**
+ * Replaces a stored value from outside the app's own editing (e.g. what sync merged in),
+ * updating any live store for that key. Refuses (false) when a store has an edit that
+ * hasn't been saved yet, so nothing typed is overwritten; try again shortly.
+ */
+export function replaceStored(key: string, value: unknown): boolean {
+  const live = mounted.get(key) ?? new Set()
+  if ([...live].some((m) => m.unsaved())) return false
+  if (!writeJson(key, value)) return false
+  live.forEach((m) => m.reload())
+  return true
+}
+
 /**
  * useState backed by a localStorage key. Saves on every change, and reloads when
- * another tab saves the same key.
+ * another tab saves the same key or sync replaces it.
  */
 export function useStoredState<T>(key: string, parse: (saved: Record<string, unknown>) => T): [T, Dispatch<SetStateAction<T>>] {
   const [value, setValue] = useState<T>(() => readJson(key, parse))
   const parseRef = useRef(parse)
+  const valueRef = useRef(value)
   // What's in storage right now, as far as this tab knows; avoids writing back what was just read.
   const stored = useRef<string | null>(null)
 
   useEffect(() => {
     parseRef.current = parse
+    valueRef.current = value
   })
+
+  useEffect(() => {
+    const m: Mounted = {
+      unsaved: () => stored.current !== null && JSON.stringify(valueRef.current) !== stored.current,
+      reload: () => {
+        const next = readJson(key, parseRef.current)
+        // Matches what's saved (give or take defaults), so it isn't written straight back.
+        stored.current = JSON.stringify(next)
+        valueRef.current = next
+        setValue(next)
+      },
+    }
+    const set = mounted.get(key) ?? new Set()
+    set.add(m)
+    mounted.set(key, set)
+    return () => void set.delete(m)
+  }, [key])
 
   useEffect(() => {
     const text = JSON.stringify(value)

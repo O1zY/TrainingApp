@@ -1,5 +1,6 @@
 import { todayIso } from '../log/format'
 import { addDays, minClock } from './dates'
+import type { Changes, Existing } from './calendarOut'
 import type { Commitment, PlanPrefs } from './types'
 
 // Bringing outside commitments in from calendars: an .ics file (any calendar app or
@@ -115,13 +116,16 @@ const unescape = (s: string) => s.replace(/\\n/gi, ' ').replace(/\\([,;\\])/g, '
 
 // ---- Google Calendar ---------------------------------------------------------
 
-// Read-only access in the browser through Google Identity Services. Needs an OAuth
-// client ID (Web application, with this site's origin allowed) in VITE_GOOGLE_CLIENT_ID.
-// The access token is kept in memory only; each sync asks Google again if it's expired.
+// Access in the browser through Google Identity Services. Needs an OAuth client ID (Web
+// application, with this site's origin allowed) in VITE_GOOGLE_CLIENT_ID. Reading asks
+// only for read access; writing the plan out asks, the first time, for access to
+// calendars the app makes itself (it can't see or change any others through that).
+// The access token is kept in memory only; Google is asked again when it expires.
 
 interface TokenResponse {
   access_token?: string
   expires_in?: number
+  scope?: string
   error?: string
 }
 
@@ -133,6 +137,7 @@ declare global {
           initTokenClient: (config: {
             client_id: string
             scope: string
+            include_granted_scopes?: boolean
             callback: (r: TokenResponse) => void
             error_callback?: (e: { type: string; message?: string }) => void
           }) => { requestAccessToken: (o?: { prompt?: string }) => void }
@@ -143,12 +148,13 @@ declare global {
 }
 
 const CLIENT_ID: string | undefined = import.meta.env.VITE_GOOGLE_CLIENT_ID
-const SCOPE = 'https://www.googleapis.com/auth/calendar.readonly'
+export const READ_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly'
+export const WRITE_SCOPE = 'https://www.googleapis.com/auth/calendar.app.created'
 const API = 'https://www.googleapis.com/calendar/v3'
 
 export const googleConfigured = !!CLIENT_ID
 
-let token: { value: string; expires: number } | undefined
+let token: { value: string; expires: number; scopes: Set<string> } | undefined
 let gis: Promise<void> | undefined
 
 function loadGis() {
@@ -166,17 +172,24 @@ function loadGis() {
   return gis
 }
 
-async function accessToken(): Promise<string> {
-  if (token && token.expires > Date.now() + 60000) return token.value
+const live = (scope: string) => !!token && token.expires > Date.now() + 60000 && token.scopes.has(scope)
+
+async function accessToken(scope = READ_SCOPE): Promise<string> {
+  if (live(scope)) return token!.value
   if (!CLIENT_ID) throw new Error('Google Calendar is not set up: add VITE_GOOGLE_CLIENT_ID')
   await loadGis()
+  // Keep what's already granted, so reading and writing share one token.
+  const wanted = new Set([scope, ...(token && token.expires > Date.now() ? token.scopes : [])])
   return new Promise((resolve, reject) => {
     const client = window.google!.accounts.oauth2.initTokenClient({
       client_id: CLIENT_ID,
-      scope: SCOPE,
+      scope: [...wanted].join(' '),
+      include_granted_scopes: true,
       callback: (r) => {
         if (!r.access_token) return reject(new Error(r.error ?? 'Google sign-in was cancelled'))
-        token = { value: r.access_token, expires: Date.now() + (r.expires_in ?? 3600) * 1000 }
+        const scopes = new Set((r.scope ?? [...wanted].join(' ')).split(' '))
+        if (!scopes.has(scope)) return reject(new Error(scope === WRITE_SCOPE ? 'Google didn’t give permission to add a calendar. Tick the box for it and try again.' : 'Google didn’t give permission to read your calendar.'))
+        token = { value: r.access_token, expires: Date.now() + (r.expires_in ?? 3600) * 1000, scopes }
         resolve(r.access_token)
       },
       error_callback: (e) => reject(new Error(e.message ?? 'Google sign-in was cancelled')),
@@ -185,14 +198,40 @@ async function accessToken(): Promise<string> {
   })
 }
 
-async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`${API}${path}`, { headers: { Authorization: `Bearer ${await accessToken()}` } })
-  if (res.status === 401) token = undefined
-  if (!res.ok) throw new Error(`Google Calendar said ${res.status}`)
-  return res.json()
+export class GoogleError extends Error {
+  readonly status: number
+  constructor(message: string, status: number) {
+    super(message)
+    this.status = status
+  }
 }
 
+const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+/** One API call. Rate limits (429, or 403 rateLimitExceeded) are retried with backoff. */
+async function call<T>(path: string, init: RequestInit = {}, scope = READ_SCOPE): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(`${API}${path}`, {
+      ...init,
+      headers: { Authorization: `Bearer ${await accessToken(scope)}`, ...(init.body ? { 'Content-Type': 'application/json' } : {}) },
+    })
+    if (res.status === 401) token = undefined
+    if (res.ok) return (res.status === 204 ? undefined : await res.json()) as T
+    const text = await res.text().catch(() => '')
+    const limited = res.status === 429 || (res.status === 403 && /rateLimitExceeded|userRateLimitExceeded/.test(text))
+    if (limited && attempt < 4) {
+      await wait(1000 * 2 ** attempt)
+      continue
+    }
+    throw new GoogleError(`Google Calendar said ${res.status}${limited ? ' (too many changes at once, try again in a minute)' : ''}`, res.status)
+  }
+}
+
+const get = <T,>(path: string) => call<T>(path)
+
 export const googleConnected = () => !!token && token.expires > Date.now()
+/** True while a token that can write the plan is live, so a push won't need a sign-in popup. */
+export const googleCanWrite = () => live(WRITE_SCOPE)
 
 export async function listCalendars() {
   const data = await get<{ items: { id: string; summary: string; primary?: boolean }[] }>('/users/me/calendarList?minAccessRole=reader')
@@ -206,6 +245,7 @@ interface GEvent {
   transparency?: string
   start: { dateTime?: string; date?: string }
   end: { dateTime?: string; date?: string }
+  extendedProperties?: { private?: Record<string, string> }
 }
 
 export async function googleEvents(calendarIds: string[], from: string, to: string): Promise<CalEvent[]> {
@@ -226,4 +266,51 @@ export async function googleEvents(calendarIds: string[], from: string, to: stri
     } while (page)
   }
   return out
+}
+
+// ---- Writing the plan out ------------------------------------------------------
+
+/** Makes the app's own calendar; returns its id. */
+export async function createPlanCalendar(name: string, timeZone: string): Promise<string> {
+  const cal = await call<{ id: string }>('/calendars', { method: 'POST', body: JSON.stringify({ summary: name, timeZone, description: 'Planned sessions from Training Tracker. Changes made here are overwritten on the next update.' }) }, WRITE_SCOPE)
+  return cal.id
+}
+
+/** Every event in the app's calendar from `from` on (all of them when `from` is omitted). */
+export async function planCalendarEvents(calendarId: string, from?: string): Promise<Existing[]> {
+  const out: Existing[] = []
+  let page: string | undefined
+  do {
+    const q = new URLSearchParams({ singleEvents: 'true', maxResults: '2500', ...(from ? { timeMin: new Date(`${from}T00:00:00`).toISOString() } : {}), ...(page ? { pageToken: page } : {}) })
+    const data = await call<{ items: GEvent[]; nextPageToken?: string }>(`/calendars/${encodeURIComponent(calendarId)}/events?${q}`, {}, WRITE_SCOPE)
+    for (const e of data.items) {
+      if (e.status === 'cancelled') continue
+      const p = e.extendedProperties?.private
+      out.push({ eventId: e.id, planId: p?.ttPlanId, hash: p?.ttHash, date: (e.start.date ?? e.start.dateTime ?? '').slice(0, 10) })
+    }
+    page = data.nextPageToken
+  } while (page)
+  return out
+}
+
+/** Sends the changes a few at a time; reports progress as it goes. */
+export async function applyChanges(calendarId: string, changes: Changes, onProgress?: (done: number, total: number) => void): Promise<void> {
+  const base = `/calendars/${encodeURIComponent(calendarId)}/events`
+  const jobs: (() => Promise<unknown>)[] = [
+    ...changes.remove.map((id) => () =>
+      call(`${base}/${encodeURIComponent(id)}`, { method: 'DELETE' }, WRITE_SCOPE).catch((e) => {
+        // Already gone is fine.
+        if (!(e instanceof GoogleError && (e.status === 404 || e.status === 410))) throw e
+      }),
+    ),
+    ...changes.update.map(({ eventId, body }) => () => call(`${base}/${encodeURIComponent(eventId)}`, { method: 'PUT', body: JSON.stringify(body) }, WRITE_SCOPE)),
+    ...changes.insert.map((body) => () => call(base, { method: 'POST', body: JSON.stringify(body) }, WRITE_SCOPE)),
+  ]
+  let done = 0
+  onProgress?.(0, jobs.length)
+  for (let i = 0; i < jobs.length; i += 4) {
+    await Promise.all(jobs.slice(i, i + 4).map((j) => j()))
+    done = Math.min(jobs.length, i + 4)
+    onProgress?.(done, jobs.length)
+  }
 }

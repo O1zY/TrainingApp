@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Card, PageHeader, Segmented } from '../components/ui'
 import { StravaConnection } from './log/Strava'
 import { DataCard } from './DataCard'
+import { SyncCard } from './SyncCard'
 import { zonesFromMax } from '../settings/hrZones'
 import { useSettings, type ThemePref, type Units } from '../settings/SettingsContext'
 
@@ -115,6 +116,7 @@ export default function Settings() {
           <StravaConnection />
         </Card>
 
+        <SyncCard />
         <DataCard />
       </div>
     </>

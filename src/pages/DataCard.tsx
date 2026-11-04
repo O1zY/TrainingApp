@@ -4,6 +4,7 @@ import { Card } from '../components/ui'
 import { daysSinceBackup, downloadBackup, parseBackup, readMeta, restoreBackup, summarise, type Backup } from '../backup'
 import { formatDate } from '../log/format'
 import { storageInfo } from '../storage'
+import { useSyncStatus } from '../sync/runner'
 
 const btn = 'inline-flex items-center gap-1.5 rounded-full border border-line px-3.5 py-1.5 text-sm font-medium hover:bg-surface-2'
 const primary = 'inline-flex items-center gap-1.5 rounded-full bg-accent px-3.5 py-1.5 text-sm font-semibold text-on-accent hover:brightness-110'
@@ -26,6 +27,7 @@ export function DataCard() {
   const [pending, setPending] = useState<Backup>()
   const [error, setError] = useState<string>()
   const file = useRef<HTMLInputElement>(null)
+  const synced = useSyncStatus().state !== 'off'
 
   useEffect(() => {
     storageInfo().then(setInfo)
@@ -64,8 +66,10 @@ export function DataCard() {
     <Card title="Your data">
       <div className="space-y-4">
         <p className="text-sm text-muted">
-          Everything is saved in this browser only. Download a backup now and then: it’s the only copy if the browser’s data is cleared, and it moves your log to another
-          device. Strava sign-in isn’t included; reconnect after restoring somewhere new.
+          {synced
+            ? 'Everything is saved in this browser and synced to your account. A backup file is still a good idea now and then: it’s a copy nobody else holds.'
+            : 'Everything is saved in this browser only. Download a backup now and then: it’s the only copy if the browser’s data is cleared, and it moves your log to another device.'}{' '}
+          Strava sign-in isn’t included; reconnect after restoring somewhere new.
         </p>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -90,7 +94,8 @@ export function DataCard() {
               {s.blocks} blocks and {s.planned} planned sessions.
             </p>
             <p className="mt-2 text-sm">
-              This <strong>replaces</strong> everything in this browser. Download a backup of what’s here first if you might want it back.
+              This <strong>replaces</strong> everything in this browser{synced ? ', and then on your other devices too, as it syncs' : ''}. Download a backup of what’s here first if
+              you might want it back.
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               <button type="button" className={btn} onClick={backup}>

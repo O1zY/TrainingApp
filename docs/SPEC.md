@@ -15,7 +15,7 @@ part training tool (plan programmes, reuse sessions, analyse progress) across ev
 | Look | Auto light/dark following the device, with manual override. Two quiet colours + one loud: oat (warm paper) and ink (deep blue-black, used in solid blocks like the sidebar and today), with violet as the loud main colour. Bricolage Grotesque for headings and big numbers, Figtree for text (agreed 4 Nov 2026) |
 | Units | User-selectable; default metric (km, kg). Rowing splits always /500m |
 | Week | Starts Monday by default (setting) |
-| Stack | React + TypeScript + Vite + Tailwind v4; Supabase for data/auth when the data sections start |
+| Stack | React + TypeScript + Vite + Tailwind v4; Supabase for sync/auth (section 10), localStorage as the working copy |
 | Existing project | Deliberately ignored so it doesn't bias the design. On 4 Nov 2026 linking it (an earlier artifact) was parked: section 7 became making the app solid instead |
 
 ## Build sections (one per session)
@@ -27,6 +27,9 @@ part training tool (plan programmes, reuse sessions, analyse progress) across ev
 5. **Analysis** ✅ — training load, PBs, planned vs completed, per-sport trends
 6. **Strava import** ✅ — OAuth + activity sync, dedupe against manual logs
 7. **Solid foundations** ✅ — safe storage, backup/restore, crash guard, faster loading, unit tests (replaced "link to existing project", now parked)
+8. **Wellbeing vs load** ✅ — which check-in scores move with training load (Analysis)
+9. **Planned sessions → Google Calendar** ✅ — write the plan out to a calendar of its own
+10. **Sync across devices** ✅ — one copy of the data in a database, shared by phone and laptop
 
 ## Session logging decisions (agreed 23 Oct 2026)
 
@@ -76,7 +79,7 @@ rep drift. HR zones live in Settings (max HR, editable zone tops, default 60/70/
 | Events | Away 4+ days in a week makes it the deload (rhythm restarts). Busy spells keep hard sessions off those days. Any week's type can be set by hand |
 | Session mix | Benchmark library workouts recur at the same build week and slot every cycle, so attempts compare. Tests (type Test or #test) close each deload. The rest is a seeded mix of other library workouts (block's library %, default 40) and one-offs from `src/plan/oneOffs.ts`, which rotate weekly and scale with week volume. Library workouts are never scaled |
 | Outside load | Shifts have a demand level (desk 5, on feet 15, physical 25, heavy 35 load units/hour, plus penalties for early, late, night and 10h+ shifts). Hard sessions go on the least-loaded days, not back to back, not before races; before work if the morning allows, otherwise after. Either side of every shift the planner keeps travel time (asked when building a block, default 20′ each way) plus a refuel gap (default 30′): to shower and eat after a session before leaving, and to get home and eat before training after work. Easy sessions shorten to fit. 45h+/55h+ work weeks drop 1/2 easy sessions and cut easy volume. Starting heuristics in `src/plan/load.ts`, for the coaching feature to tune |
-| Calendars | Manual shifts (with weekly repeat), .ics import (daily/weekly repeats expanded) and read-only Google Calendar sync in the browser (needs `VITE_GOOGLE_CLIENT_ID`, see `.env.example`). Titles matching work keywords become shifts; the rest is busy time. Edits to imported items survive re-syncs |
+| Calendars | Manual shifts (with weekly repeat), .ics import (daily/weekly repeats expanded) and read-only Google Calendar sync in the browser (the plan can also be written out, see below) (needs `VITE_GOOGLE_CLIENT_ID`, see `.env.example`). Titles matching work keywords become shifts; the rest is busy time. Edits to imported items survive re-syncs |
 | Re-planning | Automatic after saving shifts, events or the block; by hand from Plan. Logged, past, moved or edited sessions are never replaced |
 | Logging | `/log/new?plan=id` pre-fills from the planned workout; the session keeps `planId` for planned vs done in Analysis |
 
@@ -123,13 +126,46 @@ rep drift. HR zones live in Settings (max HR, editable zone tops, default 60/70/
 | Loading | Pages are lazy-loaded per route; first load went from 539 kB to 248 kB of JS |
 | Tests | Vitest (`npm test`) on the pure logic: storage, backups, time/pace/watts formatting, training load, the build/deload cycle, Strava sport mapping, laps → pieces, dedupe scoring and multisport grouping |
 
+## Wellbeing vs load decisions (4 Nov 2026)
+
+| Topic | Decision |
+|---|---|
+| Pairing | Each check-in in the Analysis range is set against the load before it (check-ins are taken as morning ones): the day before's load, and the 7-day weighted load (fatigue) to the day before. Check-ins before the first logged load are left out; after it, a day with nothing logged is rest |
+| Measures | Wellness score, sleep hours and quality, resting HR, HRV, energy, mood, motivation, soreness, tiredness, stress, each with which way is good |
+| Links | Spearman rank correlation per measure × (day before, 7-day), shown when there are 10+ pairs and \|r\| ≥ 0.2, banded weak / moderate / strong at 0.2 / 0.4 / 0.6, strongest first, in plain English ("Soreness is clearly higher the morning after a bigger day") marked good sign / worth watching. Worded as going together, never as cause |
+| Morning after | Average of a chosen measure after rest, light, moderate and hard days; light/moderate/hard are thirds of the athlete's own non-zero daily loads in the range |
+| Logic | `src/analysis/wellbeing.ts` (tested) |
+
+## Plan → Google Calendar decisions (4 Nov 2026)
+
+| Topic | Decision |
+|---|---|
+| Where | A calendar of its own, “Training plan”, made by the app. Scope `calendar.app.created`: the app can only see and change calendars it made, never the rest of the account. Asked for only when sending the plan out; reading shifts still asks for read-only. Both share one in-memory token |
+| What | Planned sessions from today on, not skipped. With a time: booked for their length (an hour if unknown), marked busy. Without: an all-day event marked free. Key sessions Grape (violet), races Tomato, the rest the calendar's colour. Logged sessions get “✓”. Description: intensity · sport · length, workout structure, notes, why that day, link back to the session |
+| Updates | Each event carries the planned session's id and a fingerprint of its contents (private extended properties), so “Update calendar” reads the calendar and only sends what changed: adds, updates, and removes events from today on that no longer match (skipped, deleted, re-planned away, duplicates). Past events are left as a record. Works the same from any device. A calendar deleted in Google is made again on the next update. Sends four at a time with backoff on rate limits |
+| Auto-update | Optional (“Keep it updated as the plan changes”): a few seconds after the plan or log changes, re-sends, but only while Google access is live in that tab, so it never pops a sign-in up by itself |
+| Code | Mapping and diff `src/plan/calendarOut.ts` (tested); API calls `src/plan/calendar.ts`; `src/plan/pushPlan.ts`; watcher `src/plan/CalendarAutoPush.tsx` (loads the push code only when it fires); UI in Plan › Work & calendar |
+
+## Sync across devices decisions (4 Nov 2026)
+
+| Topic | Decision |
+|---|---|
+| Service | Supabase (as planned in the stack), the person's own free project. Spoken to over its REST APIs, no SDK. `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` (public by design). Schema in `supabase/schema.sql` |
+| Account | Email + password (Supabase Auth). Session in `tt-sync` on the device, never in backups; refreshed on demand, re-read before each refresh so tabs don't clash. Signing out stops syncing and keeps everything in the browser |
+| Shape | One row per store per person (`tt_store`: user, key, JSON data, `rev`). Row level security: own rows only. A trigger only lets `rev` go up by one. localStorage stays the working copy, so the app works offline exactly as before |
+| Writes | Conditional: a device writes revision n+1 only if the row is still at n (PATCH filtered on `rev`); first writes are inserts (409 = someone got there first). Losing a race means pull, merge again on top, retry (up to 4 times) |
+| Merge | Three-way against `tt-sync-base` (the copy and revision this device last agreed with the account). Objects key by key; record lists by `id` (`date` for check-ins, `exercise` for 1RMs): adds on either side kept, deletes carried over, an edit beats a delete; plain lists as sets; a real clash on one value goes to the later `updatedAt`, else this device. With no base (signing in on a device that already has data) both copies are combined and the account wins clashes. Logic `src/sync/merge.ts`, `src/sync/engine.ts` (tested with two fake devices) |
+| Live updates | Sync applies merged data through `replaceStored` (`src/storage.ts`), which updates the open pages at once and refuses while an edit is mid-save (that store waits for the next round), so nothing typed is overwritten |
+| Strava | Tokens never leave the device that connected; imported ids, review queue and settings sync, so dedupe holds across devices. If two devices import the same activity at once, the duplicate session (same `externalId`) is dropped after the merge |
+| When | On opening, 3s after any change, on coming back into view (if 30s+ since the last), on going back online, and every 5 min while visible. One tab at a time via Web Locks. Status and errors in Settings › Sync across devices |
+| Backups | Still offered. A restore while signed in replaces the account's copy too (said in the confirm), since the restored data is newer than the base |
+| Not yet | Realtime push from the server (changes arrive on the next sync instead), deleting the account's data from inside the app (delete the rows or the user in Supabase) |
+
 ## Parked for later (noted 23 Oct 2026)
 
 - **Link to the existing project** (an earlier artifact). Parked 4 Nov 2026 in favour of making this app solid first.
 
 - **Garmin import** for the morning check-in (no personal-use API); revisit later.
-- **Outward calendar sync.** Writing planned sessions back into Google Calendar.
-- **Wellbeing vs load.** Check-ins are stored alongside training; correlating them (sleep, HRV, soreness against load) is a natural Analysis follow-up.
 - **Adaptive coaching.** The miss thresholds in `src/log/targets.ts` are a flat start. A later coaching
   feature should learn from logged sessions and check-ins and adjust how strictly reps are judged:
   harsher when there's room to push, more forgiving after poor sleep, high soreness or a fading block.

@@ -51,3 +51,23 @@ describe('writeJson', () => {
     expect(JSON.parse(ls.getItem('k')!)).toEqual({ a: 1 })
   })
 })
+
+describe('onWrite and replaceStored', () => {
+  it('tells listeners about saves, and replaceStored saves like any write', async () => {
+    const { onWrite, replaceStored } = await import('./storage')
+    const heard: string[] = []
+    const off = onWrite((k) => heard.push(k))
+    writeJson('a', { x: 1 })
+    expect(replaceStored('b', { y: 2 })).toBe(true)
+    off()
+    writeJson('c', {})
+    expect(heard).toEqual(['a', 'b'])
+    expect(JSON.parse(ls.getItem('b')!)).toEqual({ y: 2 })
+  })
+
+  it('reports a refused write', async () => {
+    const { replaceStored } = await import('./storage')
+    ls.failWrites = true
+    expect(replaceStored('b', { y: 2 })).toBe(false)
+  })
+})
