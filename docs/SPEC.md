@@ -24,7 +24,7 @@ part training tool (plan programmes, reuse sessions, analyse progress) across ev
 2. **Session logging** ✅ — fast entry per sport, sport-specific fields, RPE/notes
 3. **Session library** ✅ — reusable workouts/templates, log-from-template
 4. **Programme planner** ✅ — blocks → weeks → sessions, target races, schedule around work
-5. **Analysis** — training load, PBs, planned vs completed, per-sport trends
+5. **Analysis** ✅ — training load, PBs, planned vs completed, per-sport trends
 6. **Strava import** — OAuth + activity sync, dedupe against manual logs
 7. **Link to existing project** — scope decided at that point
 
@@ -79,6 +79,19 @@ rep drift. HR zones live in Settings (max HR, editable zone tops, default 60/70/
 | Calendars | Manual shifts (with weekly repeat), .ics import (daily/weekly repeats expanded) and read-only Google Calendar sync in the browser (needs `VITE_GOOGLE_CLIENT_ID`, see `.env.example`). Titles matching work keywords become shifts; the rest is busy time. Edits to imported items survive re-syncs |
 | Re-planning | Automatic after saving shifts, events or the block; by hand from Plan. Logged, past, moved or edited sessions are never replaced |
 | Logging | `/log/new?plan=id` pre-fills from the planned workout; the session keeps `planId` for planned vs done in Analysis |
+
+## Analysis decisions (4 Nov 2026)
+
+| Topic | Decision |
+|---|---|
+| Layout | Tabs: Load · Progress · Plan vs done. One filter row (range 4 wk / 12 wk / 6 mo / 1 yr, sport) scopes everything below; tab, range and sport live in the URL |
+| Load | Session RPE × minutes per day; 7- and 28-day exponentially weighted averages (Williams et al. 2017) and their ratio, labelled as a guide only; Foster monotony for the last 7 days; weekly hours by sport; training load beside work load from shifts; daily check-in score. Logic: `src/analysis/load.ts` |
+| PBs | Standard distances per sport (erg 500m–10k and 30/60 min, run 1km–marathon, bike 10/40km, swim 100–1500m), from whole sessions or reps. Exact for erg and pool, 2% over allowed for GPS. All-time, with "New" when set inside the range. Logic: `src/analysis/records.ts` |
+| Repeat sessions | Any library workout done twice or more in the range, attempt by attempt: average pace, volume lifted, or WOD time/rounds |
+| Trends | Weekly average pace of easy sessions per sport (HR in the table); estimated 1RM (Epley) per lift, with tested maxes as their own series |
+| Plan vs done | Only sessions due up to today count. Completion overall and for key sessions, planned vs done hours per week, by intensity, missed key sessions, unplanned extras. Logic: `src/analysis/compliance.ts` |
+| Charts | Hand-written SVG in `src/components/charts.tsx`: one y-axis, ≤ 24px bars with 4px rounded tops and 2px gaps, 2px lines, hover and keyboard readout, and a Table view on every chart |
+| Chart colours | `--chart-*` tokens follow the sport colours. Dark mode uses its own darker steps of the same hues so fills sit in the readable band. Stack order rowing, run, swim, bike, strength, recovery passes the colour-blind checks (worst neighbour ΔE 16.5 light, 18.9 dark) |
 
 ## Parked for later (noted 23 Oct 2026)
 

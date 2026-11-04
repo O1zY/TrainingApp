@@ -37,6 +37,21 @@
   --phase-taper: #c27c0e;
   --phase-race: #d6336c;
 
+  /*
+   * Chart marks. Light mode reuses the sport colours; dark mode steps them down into
+   * the band where fills read well on the dark surface (icons keep the lighter ones).
+   * Order row, run, swim, bike, strength, recovery passes the colour-blind checks.
+   */
+  --chart-row: var(--sport-row);
+  --chart-run: var(--sport-run);
+  --chart-swim: var(--sport-swim);
+  --chart-bike: var(--sport-bike);
+  --chart-strength: var(--sport-strength);
+  --chart-recovery: var(--sport-recovery);
+  --chart-other: #7b8494;
+  /* De-emphasis: context marks (planned, daily bars) behind the series that matter. */
+  --chart-muted: #c3cad4;
+
   color-scheme: light;
 }
 
@@ -68,6 +83,15 @@
   --phase-deload: #94a3b8;
   --phase-taper: #fbbf24;
   --phase-race: #f472b6;
+
+  --chart-row: #3b82f6;
+  --chart-run: #ea580c;
+  --chart-swim: #0284c7;
+  --chart-bike: #b88a04;
+  --chart-strength: #8b5cf6;
+  --chart-recovery: #0d9488;
+  --chart-other: #7b8494;
+  --chart-muted: #3a414d;
 
   color-scheme: dark;
 }
