@@ -1,4 +1,6 @@
-import { Flag, HeartPulse } from 'lucide-react'
+import { DatabaseBackup, Flag, HeartPulse } from 'lucide-react'
+import { useState } from 'react'
+import { backupDue, daysSinceBackup, downloadBackup, readMeta } from '../backup'
 import { Link } from 'react-router-dom'
 import { Card, StatTile } from '../components/ui'
 import { formatTime, todayIso } from '../log/format'
@@ -58,6 +60,8 @@ export default function Home() {
           {greeting(today)}, Ollie<span className="text-accent">.</span>
         </h1>
       </div>
+
+      <BackupReminder sessionCount={sessions.length} />
 
       <div className="grid gap-5 lg:grid-cols-3">
         <Card title="Today" className="lg:col-span-2">
@@ -157,6 +161,32 @@ export default function Home() {
       <Card title="Recent activity" action={<Link to="/log" className="text-sm font-medium text-accent-strong">All history</Link>}>
         <Feed limitDays={5} />
       </Card>
+    </div>
+  )
+}
+
+/** A nudge when there's a fair amount logged and no recent backup; everything lives in this one browser. */
+function BackupReminder({ sessionCount }: { sessionCount: number }) {
+  const [meta, setMeta] = useState(readMeta)
+  if (!backupDue(meta, sessionCount)) return null
+  const days = daysSinceBackup(meta)
+  return (
+    <div className="flex flex-wrap items-center gap-3 rounded-[20px] border border-line/70 bg-surface px-4 py-3 text-sm">
+      <DatabaseBackup className="size-5 shrink-0 text-accent-strong" />
+      <p className="min-w-0 flex-1">
+        {days === undefined ? 'Your training is only saved in this browser.' : `Your last backup was ${days} days ago.`}{' '}
+        <span className="text-muted">A backup file keeps it safe if the browser’s data gets cleared.</span>
+      </p>
+      <button
+        type="button"
+        onClick={() => {
+          downloadBackup()
+          setMeta(readMeta())
+        }}
+        className="rounded-full bg-accent px-4 py-1.5 font-semibold text-on-accent hover:brightness-110"
+      >
+        Download backup
+      </button>
     </div>
   )
 }

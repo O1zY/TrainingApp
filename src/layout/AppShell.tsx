@@ -1,5 +1,8 @@
 import { Activity, Plus, Settings as SettingsIcon } from 'lucide-react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { Suspense } from 'react'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { ErrorBoundary } from '../components/ErrorBoundary'
+import { StorageBanner } from '../components/StorageBanner'
 import { NAV } from './nav'
 
 const APP_NAME = 'Training Tracker'
@@ -109,14 +112,24 @@ function TabBar() {
   )
 }
 
+function PageLoading() {
+  return <div className="h-40 animate-pulse rounded-[20px] bg-surface-2/60" aria-label="Loading" />
+}
+
 export function AppShell() {
+  const { pathname } = useLocation()
   return (
     <div className="flex min-h-dvh">
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar />
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 pb-28 pt-5 md:px-8 md:pb-10 md:pt-8">
-          <Outlet />
+          <StorageBanner />
+          <ErrorBoundary key={pathname}>
+            <Suspense fallback={<PageLoading />}>
+              <Outlet />
+            </Suspense>
+          </ErrorBoundary>
         </main>
       </div>
       <TabBar />

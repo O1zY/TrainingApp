@@ -1,4 +1,5 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useContext, type ReactNode } from 'react'
+import { KEYS, useStoredState, withArrays } from '../storage'
 import { newId } from '../log/format'
 import { DEFAULT_PREFS, byDate, mergeImported } from './data'
 import type { Block, Commitment, PlanEvent, PlanPrefs, PlannedSession } from './types'
@@ -12,17 +13,12 @@ interface PlanData {
 }
 
 const EMPTY: PlanData = { blocks: [], planned: [], events: [], commitments: [], prefs: DEFAULT_PREFS }
-const STORAGE_KEY = 'tt-plan-v1'
 
 // Plan data lives in localStorage next to the log until the Supabase section;
-// this file is the only one that touches it.
-function load(): PlanData {
-  try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}')
-    return { ...EMPTY, ...saved, prefs: { ...DEFAULT_PREFS, ...saved.prefs } }
-  } catch {
-    return EMPTY
-  }
+// this is the only store that touches it.
+function parsePlan(saved: Record<string, unknown>): PlanData {
+  const prefs = saved.prefs && typeof saved.prefs === 'object' ? saved.prefs : {}
+  return { ...withArrays(EMPTY, saved), prefs: { ...DEFAULT_PREFS, ...prefs } }
 }
 
 export type BlockDraft = Omit<Block, 'id' | 'createdAt' | 'updatedAt'> & { id?: string; createdAt?: string }
@@ -55,15 +51,7 @@ function upsert<T>(list: T[], item: T, same: (a: T) => boolean) {
 }
 
 export function PlanProvider({ children }: { children: ReactNode }) {
-  const [data, setData] = useState<PlanData>(load)
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
-    } catch {
-      // Storage unavailable or full; the plan still works for this visit.
-    }
-  }, [data])
+  const [data, setData] = useStoredState(KEYS.plan, parsePlan)
 
   const value: PlanValue = {
     ...data,

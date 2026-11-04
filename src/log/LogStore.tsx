@@ -1,4 +1,5 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useContext, type ReactNode } from 'react'
+import { KEYS, useStoredState, withArrays } from '../storage'
 import { newId } from './format'
 import type { Multisport, OneRepMax, Session, Wellbeing, Workout } from './types'
 
@@ -11,17 +12,10 @@ interface LogData {
 }
 
 const EMPTY: LogData = { sessions: [], multisport: [], wellbeing: [], maxes: [], workouts: [] }
-const STORAGE_KEY = 'tt-log-v1'
 
-// Training data lives in localStorage until the Supabase section. Everything that
-// touches storage is in this file, so swapping the backend only changes here.
-function load(): LogData {
-  try {
-    return { ...EMPTY, ...JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}') }
-  } catch {
-    return EMPTY
-  }
-}
+// Training data lives in localStorage (via src/storage.ts) until the Supabase section.
+// This is the only store that touches the log, so swapping the backend only changes here.
+const parseLog = (saved: Record<string, unknown>): LogData => withArrays(EMPTY, saved)
 
 export type SessionDraft = Omit<Session, 'id' | 'createdAt' | 'updatedAt'> & { id?: string; createdAt?: string }
 export type WorkoutDraft = Omit<Workout, 'id' | 'createdAt' | 'updatedAt'> & { id?: string; createdAt?: string }
@@ -54,15 +48,7 @@ function upsert<T>(list: T[], item: T, same: (a: T) => boolean) {
 }
 
 export function LogProvider({ children }: { children: ReactNode }) {
-  const [data, setData] = useState<LogData>(load)
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
-    } catch {
-      // Storage unavailable or full; data still works for this visit.
-    }
-  }, [data])
+  const [data, setData] = useStoredState(KEYS.log, parseLog)
 
   const value: LogValue = {
     ...data,
