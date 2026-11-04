@@ -140,4 +140,10 @@ export interface PlanPrefs {
   /** Google calendars to read. */
   calendarIds: string[]
   lastSync?: string
+  /** The app's own Google calendar the plan is written to, once made. */
+  pushCalendarId?: string
+  /** When the plan was last written out. */
+  lastPush?: string
+  /** Write changes out automatically while Google access is live in this tab. */
+  autoPush?: boolean
 }
