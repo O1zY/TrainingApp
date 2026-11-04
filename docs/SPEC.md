@@ -28,7 +28,7 @@ part training tool (plan programmes, reuse sessions, analyse progress) across ev
 6. **Strava import** ✅ — OAuth + activity sync, dedupe against manual logs
 7. **Solid foundations** ✅ — safe storage, backup/restore, crash guard, faster loading, unit tests (replaced "link to existing project", now parked)
 8. **Wellbeing vs load** ✅ — which check-in scores move with training load (Analysis)
-9. **Planned sessions → Google Calendar** — write the plan out to a calendar of its own
+9. **Planned sessions → Google Calendar** ✅ — write the plan out to a calendar of its own
 10. **Sync across devices** — one copy of the data in a database, shared by phone and laptop
 
 ## Session logging decisions (agreed 23 Oct 2026)
@@ -79,7 +79,7 @@ rep drift. HR zones live in Settings (max HR, editable zone tops, default 60/70/
 | Events | Away 4+ days in a week makes it the deload (rhythm restarts). Busy spells keep hard sessions off those days. Any week's type can be set by hand |
 | Session mix | Benchmark library workouts recur at the same build week and slot every cycle, so attempts compare. Tests (type Test or #test) close each deload. The rest is a seeded mix of other library workouts (block's library %, default 40) and one-offs from `src/plan/oneOffs.ts`, which rotate weekly and scale with week volume. Library workouts are never scaled |
 | Outside load | Shifts have a demand level (desk 5, on feet 15, physical 25, heavy 35 load units/hour, plus penalties for early, late, night and 10h+ shifts). Hard sessions go on the least-loaded days, not back to back, not before races; before work if the morning allows, otherwise after. Either side of every shift the planner keeps travel time (asked when building a block, default 20′ each way) plus a refuel gap (default 30′): to shower and eat after a session before leaving, and to get home and eat before training after work. Easy sessions shorten to fit. 45h+/55h+ work weeks drop 1/2 easy sessions and cut easy volume. Starting heuristics in `src/plan/load.ts`, for the coaching feature to tune |
-| Calendars | Manual shifts (with weekly repeat), .ics import (daily/weekly repeats expanded) and read-only Google Calendar sync in the browser (needs `VITE_GOOGLE_CLIENT_ID`, see `.env.example`). Titles matching work keywords become shifts; the rest is busy time. Edits to imported items survive re-syncs |
+| Calendars | Manual shifts (with weekly repeat), .ics import (daily/weekly repeats expanded) and read-only Google Calendar sync in the browser (the plan can also be written out, see below) (needs `VITE_GOOGLE_CLIENT_ID`, see `.env.example`). Titles matching work keywords become shifts; the rest is busy time. Edits to imported items survive re-syncs |
 | Re-planning | Automatic after saving shifts, events or the block; by hand from Plan. Logged, past, moved or edited sessions are never replaced |
 | Logging | `/log/new?plan=id` pre-fills from the planned workout; the session keeps `planId` for planned vs done in Analysis |
 
@@ -136,12 +136,21 @@ rep drift. HR zones live in Settings (max HR, editable zone tops, default 60/70/
 | Morning after | Average of a chosen measure after rest, light, moderate and hard days; light/moderate/hard are thirds of the athlete's own non-zero daily loads in the range |
 | Logic | `src/analysis/wellbeing.ts` (tested) |
 
+## Plan → Google Calendar decisions (4 Nov 2026)
+
+| Topic | Decision |
+|---|---|
+| Where | A calendar of its own, “Training plan”, made by the app. Scope `calendar.app.created`: the app can only see and change calendars it made, never the rest of the account. Asked for only when sending the plan out; reading shifts still asks for read-only. Both share one in-memory token |
+| What | Planned sessions from today on, not skipped. With a time: booked for their length (an hour if unknown), marked busy. Without: an all-day event marked free. Key sessions Grape (violet), races Tomato, the rest the calendar's colour. Logged sessions get “✓”. Description: intensity · sport · length, workout structure, notes, why that day, link back to the session |
+| Updates | Each event carries the planned session's id and a fingerprint of its contents (private extended properties), so “Update calendar” reads the calendar and only sends what changed: adds, updates, and removes events from today on that no longer match (skipped, deleted, re-planned away, duplicates). Past events are left as a record. Works the same from any device. A calendar deleted in Google is made again on the next update. Sends four at a time with backoff on rate limits |
+| Auto-update | Optional (“Keep it updated as the plan changes”): a few seconds after the plan or log changes, re-sends, but only while Google access is live in that tab, so it never pops a sign-in up by itself |
+| Code | Mapping and diff `src/plan/calendarOut.ts` (tested); API calls `src/plan/calendar.ts`; `src/plan/pushPlan.ts`; watcher `src/plan/CalendarAutoPush.tsx` (loads the push code only when it fires); UI in Plan › Work & calendar |
+
 ## Parked for later (noted 23 Oct 2026)
 
 - **Link to the existing project** (an earlier artifact). Parked 4 Nov 2026 in favour of making this app solid first.
 
 - **Garmin import** for the morning check-in (no personal-use API); revisit later.
-- **Outward calendar sync.** Writing planned sessions back into Google Calendar.
 - **Adaptive coaching.** The miss thresholds in `src/log/targets.ts` are a flat start. A later coaching
   feature should learn from logged sessions and check-ins and adjust how strictly reps are judged:
   harsher when there's room to push, more forgiving after poor sleep, high soreness or a fading block.

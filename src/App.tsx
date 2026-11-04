@@ -2,6 +2,7 @@ import { lazy, type ComponentType } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AppShell } from './layout/AppShell'
 import { LogProvider } from './log/LogStore'
+import { CalendarAutoPush } from './plan/CalendarAutoPush'
 import { PlanProvider } from './plan/PlanStore'
 import { SettingsProvider } from './settings/SettingsContext'
 import { StravaProvider } from './strava/StravaStore'
@@ -54,6 +55,7 @@ export default function App() {
       <LogProvider>
         <PlanProvider>
           <StravaProvider>
+            {!!import.meta.env.VITE_GOOGLE_CLIENT_ID && <CalendarAutoPush />}
             <BrowserRouter>
               <Routes>
                 <Route element={<AppShell />}>

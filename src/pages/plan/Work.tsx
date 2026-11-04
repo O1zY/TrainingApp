@@ -1,13 +1,14 @@
-import { ArrowLeft, CalendarSync, FileUp, Plus, Trash2 } from 'lucide-react'
+import { ArrowLeft, CalendarArrowUp, CalendarSync, FileUp, Plus, Trash2 } from 'lucide-react'
 import { useState, type ChangeEvent, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { Chips, Field, FieldGroup, NumberInput, TextInput, inputClass } from '../../components/fields'
+import { Chips, Field, FieldGroup, NumberInput, TextInput, Toggle, inputClass } from '../../components/fields'
 import { Card, PageHeader, Segmented } from '../../components/ui'
 import { formatDate, todayIso } from '../../log/format'
-import { googleConfigured, googleConnected, googleEvents, listCalendars, parseIcs, toCommitments, type CommitmentDraft } from '../../plan/calendar'
+import { googleCanWrite, googleConfigured, googleConnected, googleEvents, listCalendars, parseIcs, toCommitments, type CommitmentDraft } from '../../plan/calendar'
 import { addDays, weekDates, weekStart } from '../../plan/dates'
 import { DEMANDS, DEMAND_OPTIONS, dayLoad, weekWork } from '../../plan/load'
 import { blockEnd, useReplan } from '../../plan/planned'
+import { describePush, usePushPlan } from '../../plan/pushPlan'
 import { mergeImported } from '../../plan/data'
 import { usePlan } from '../../plan/PlanStore'
 import type { Commitment, Demand } from '../../plan/types'
@@ -185,6 +186,65 @@ function GoogleCalendar() {
         </button>
       </div>
       {status && <p className="mt-3 text-sm">{status}</p>}
+    </Card>
+  )
+}
+
+/** Writes the plan out to a Google calendar the app makes for it. */
+function SendToCalendar() {
+  const { planned, prefs, updatePrefs } = usePlan()
+  const push = usePushPlan()
+  const [busy, setBusy] = useState(false)
+  const [status, setStatus] = useState<string>()
+  if (!googleConfigured) return null
+  const upcoming = planned.filter((p) => p.date >= todayIso() && !p.skipped).length
+
+  const send = async () => {
+    setBusy(true)
+    setStatus('Signing in to Google…')
+    try {
+      const r = await push((done, total) => setStatus(total ? `Sending ${done} of ${total}…` : 'Checking what’s changed…'))
+      setStatus(describePush(r))
+    } catch (e) {
+      setStatus((e as Error).message)
+    }
+    setBusy(false)
+  }
+
+  return (
+    <Card title="Send plan to Google Calendar">
+      <p className="text-sm text-muted">
+        Puts your planned sessions from today on into a calendar of their own, “Training plan”, so they show on your phone next to your shifts. The app only ever changes that
+        calendar; hide or delete it in Google whenever you like. Sessions with a time are booked for their length, the rest are all-day reminders that don’t mark you busy. Key
+        sessions are purple, races red, and logged ones get a ✓.
+      </p>
+      {prefs.lastPush && <p className="mt-2 text-sm text-muted">Last sent {formatDate(prefs.lastPush.slice(0, 10))}.</p>}
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          disabled={busy || (!upcoming && !prefs.pushCalendarId)}
+          onClick={send}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-on-accent hover:opacity-90 disabled:opacity-50"
+        >
+          <CalendarArrowUp className="size-4" /> {prefs.pushCalendarId ? 'Update calendar' : 'Send to Google Calendar'}
+        </button>
+        {prefs.pushCalendarId && (
+          <Toggle checked={!!prefs.autoPush} onChange={(v) => updatePrefs({ autoPush: v })} label="Keep it updated as the plan changes" />
+        )}
+      </div>
+      {!upcoming && !prefs.pushCalendarId && <p className="mt-2 text-sm text-muted">Nothing planned from today on yet.</p>}
+      {prefs.autoPush && prefs.pushCalendarId && (
+        <p className="mt-2 text-xs text-muted">
+          {googleCanWrite()
+            ? 'Changes go across a few seconds after you make them.'
+            : 'Changes go across automatically once you’ve signed in to Google this visit (press Update calendar once).'}
+        </p>
+      )}
+      {status && (
+        <p className="mt-3 text-sm" aria-live="polite">
+          {status}
+        </p>
+      )}
     </Card>
   )
 }
@@ -368,6 +428,7 @@ export default function Work() {
           <WorkingDay />
           <AddShift />
           <GoogleCalendar />
+          <SendToCalendar />
           <IcsImport />
           <ImportSettings />
         </div>
