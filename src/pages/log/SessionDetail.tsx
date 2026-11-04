@@ -24,6 +24,7 @@ import { exerciseStats, pieceWatts, sessionLoad, summarisePieces } from '../../l
 import { STATUS_LABEL, checkTarget, checkZone, describeAim, describeTarget, statusColor } from '../../log/targets'
 import type { Session } from '../../log/types'
 import { useSettings } from '../../settings/SettingsContext'
+import { ViewOnStrava } from './Strava'
 import { WellbeingSummary } from './Wellbeing'
 
 export function Stat({ label, value, unit, sub }: { label: string; value: ReactNode; unit?: string; sub?: string }) {
@@ -316,8 +317,9 @@ export default function SessionDetail() {
               {formatDate(s.date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
               {s.startTime && ` · ${s.startTime.slice(0, 5)}`}
               {s.indoor && (s.sport === 'run' ? ' · Treadmill' : ' · Indoor')}
-              {s.source === 'strava' && ' · from Strava'}
+              {s.source === 'strava' ? ' · from Strava' : s.externalId ? ' · matched with Strava' : ''}
             </p>
+            {s.externalId && <ViewOnStrava id={s.externalId} className="mt-1" />}
           </div>
         </div>
         <div className="flex gap-2">

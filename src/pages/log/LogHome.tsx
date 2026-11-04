@@ -9,6 +9,7 @@ import { LOGGABLE, SPORTS } from '../../log/sports'
 import type { Sport } from '../../log/types'
 import { Feed } from './Feed'
 import { SportPicker } from './SessionForm'
+import { StravaBanner } from './Strava'
 import { WellbeingSummary } from './Wellbeing'
 
 export default function LogHome() {
@@ -62,6 +63,8 @@ export default function LogHome() {
           </Link>
         </Card>
       </div>
+
+      <StravaBanner />
 
       <Card title="History">
         {usedSports.length > 1 && (

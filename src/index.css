@@ -40,6 +40,8 @@
   --sport-run: #c95d27;
   --sport-bike: #a67f12;
   --sport-swim: #1f7f99;
+  /* Strava's brand orange, only for "View on Strava" links and the Strava mark. */
+  --strava: #e34402;
   --sport-strength: #b84a72;
   --sport-recovery: #23897a;
 
@@ -81,6 +83,7 @@
   --sport-run: #f0905a;
   --sport-bike: #e2c04a;
   --sport-swim: #5cc0e4;
+  --strava: #fc5200;
   --sport-strength: #ec8cb0;
   --sport-recovery: #4fc9b8;
 
@@ -118,6 +121,7 @@
   --color-sport-run: var(--sport-run);
   --color-sport-bike: var(--sport-bike);
   --color-sport-swim: var(--sport-swim);
+  --color-strava: var(--strava);
   --color-sport-strength: var(--sport-strength);
   --color-sport-recovery: var(--sport-recovery);
   --color-hit: var(--hit);

@@ -46,25 +46,27 @@ const median = (xs: number[]) => {
 const SPLIT_DISTANCES = [500, 1000, 1609.344, 5000, 10000]
 
 /**
- * Laps become pieces when they look like a workout. Slow laps (under 60% of the typical
- * lap speed) are treated as rest and folded into the piece before them; a slow first lap
- * is a warm-up and dropped. Laps that are all the same standard distance or time with no
- * rest between them are automatic splits, not pieces, and are left out.
+ * Laps become pieces when they look like a workout. Slow laps (under 70% of the speed of
+ * the faster half of laps) are treated as rest and folded into the piece before them; a
+ * slow first lap is a warm-up and dropped, a slow last one a cool-down. Laps that are all
+ * the same standard distance (500m, 1km, 1mi, 5km, 10km), or all the same time with no rest
+ * between them, are automatic splits, not pieces, and are left out.
  */
 export function lapsToPieces(laps: StravaLap[] | undefined, sport: Sport): Piece[] | undefined {
   if (!SPORTS[sport].pieces || !laps || laps.length < 2) return undefined
   const speed = (l: StravaLap) => l.average_speed ?? (l.elapsed_time ? l.distance / l.elapsed_time : 0)
-  const typical = median(laps.map(speed))
-  const isRest = (l: StravaLap) => typical > 0 && (speed(l) < typical * 0.6 || l.distance < 1)
+  // The rest laps would drag a plain median down, so the reference is the faster half's.
+  const faster = laps.map(speed).sort((x, y) => y - x).slice(0, Math.ceil(laps.length / 2))
+  const typical = median(faster)
+  const isRest = (l: StravaLap) => typical > 0 && (speed(l) < typical * 0.7 || l.distance < 1)
 
   const work = laps.filter((l) => !isRest(l))
   if (work.length < 2) return undefined
-  if (work.length === laps.length) {
-    const body = laps.slice(0, -1)
-    const same = (xs: number[]) => xs.every((x) => Math.abs(x - xs[0]) <= xs[0] * 0.015)
-    const standardDistance = SPLIT_DISTANCES.some((d) => Math.abs(body[0].distance - d) <= d * 0.015)
-    if ((same(body.map((l) => l.distance)) && standardDistance) || same(body.map((l) => l.elapsed_time))) return undefined
-  }
+  const body = laps.slice(0, -1)
+  const same = (xs: number[]) => xs.every((x) => Math.abs(x - xs[0]) <= xs[0] * 0.015)
+  const standardDistance = SPLIT_DISTANCES.some((d) => Math.abs(body[0].distance - d) <= d * 0.015)
+  if (same(body.map((l) => l.distance)) && standardDistance) return undefined
+  if (work.length === laps.length && same(body.map((l) => l.elapsed_time))) return undefined
 
   const pieces: Piece[] = []
   for (const l of laps) {

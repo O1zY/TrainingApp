@@ -25,7 +25,7 @@ part training tool (plan programmes, reuse sessions, analyse progress) across ev
 3. **Session library** ✅ — reusable workouts/templates, log-from-template
 4. **Programme planner** ✅ — blocks → weeks → sessions, target races, schedule around work
 5. **Analysis** ✅ — training load, PBs, planned vs completed, per-sport trends
-6. **Strava import** — OAuth + activity sync, dedupe against manual logs
+6. **Strava import** ✅ — OAuth + activity sync, dedupe against manual logs
 7. **Link to existing project** — scope decided at that point
 
 ## Session logging decisions (agreed 23 Oct 2026)
@@ -91,6 +91,22 @@ rep drift. HR zones live in Settings (max HR, editable zone tops, default 60/70/
 | Per-sport trends | Small multiples, one row per sport in a fixed order, of weekly time, distance or load, with total and second-half vs first-half change; plus average pace per week for erg, water, run, bike and swim |
 | PBs | Fastest time over standard distances per sport (erg 500m–half marathon, water 1k/2k/5k, run 1k–marathon, bike 10/20/40k, swim 100–1500m) from a whole session or a single piece within 1.5% of the distance, scaled to the exact distance. Water and erg kept apart. "New" if set in the last 28 days and beating an earlier attempt. Lifts: best Epley e1RM (≤12 reps) and heaviest weight, with an e1RM trend. Logic: `src/analysis/pbs.ts` |
 | Charts | Hand-rolled SVG/HTML in `src/components/charts.tsx`, no chart library. One axis per chart; every chart has a hover/keyboard readout and a legend or labels, so nothing relies on colour alone (the sport colours aren't colour-blind safe next to each other, which is why per-sport views are labelled rows, not stacks) |
+
+## Strava import decisions (4 Nov 2026)
+
+| Topic | Decision |
+|---|---|
+| Sign-in | Strava OAuth code flow. Strava needs the client secret to swap the code for tokens and to refresh them, so a small handler on the dev/preview server does that (`server/stravaToken.ts`, `/api/strava/*`), reading `STRAVA_CLIENT_ID` and `STRAVA_CLIENT_SECRET` from `.env.local` (no `VITE_` prefix, never in the bundle). The same handler can become a serverless function when the app is hosted. Activity reads go straight from the browser to Strava. Scope `read,activity:read_all` |
+| Storage | `tt-strava-v1` in localStorage: tokens, athlete, import-from date, ids already dealt with, activities still waiting for details, the review queue. `src/strava/StravaStore.tsx` is the only file that touches it; sessions go through the log store |
+| Sync | Automatic when the app opens (at most every 30′), or "Sync now" on Log › Strava. First sync lists from the import-from date (default 12 weeks back; moving it earlier backfills), later ones from the last sync minus 3 days for late uploads. Up to 60 detail reads per sync (laps, description, private note, perceived exertion); the rest are imported from the list and filled in on later syncs. Rate limits stop the details, not the import |
+| Mapping | Rowing without GPS (or trainer/virtual) → erg, with GPS → on-water. Run/Ride variants → run/bike, virtual or trainer = indoor. Swim pool/open from GPS. Weight training/CrossFit/HIIT → strength; yoga/Pilates/walk → recovery; the rest → other. Moving time, except races (clock time). Run cadence doubled to steps/min. Strava's automatic "Morning Run"-style names are dropped. Logic: `src/strava/convert.ts` |
+| Laps → pieces | Slow laps (<70% of the faster half's speed, or 0m) are rest, folded into the piece before; leading/trailing slow laps are warm-up/cool-down. Laps all one standard distance (500m, 1k, 1mi, 5k, 10k), or all one time with no rest, are auto-splits and don't become pieces |
+| Dedupe | A manual session is a candidate on the same day in a compatible sport (erg ≈ on-water; "other" weak), unless start times are 3h+ apart, durations 50%+ (not for strength) or distances 25%+. Close start (≤30′/≤90′), duration (≤10%/≤25%) and distance (≤3%/≤10%) score 2/1. Auto-merge when score ≥3 and 2+ clear of the next candidate, or when it's the only candidate both ways round in the same sport; otherwise "To check" (same session / import as new / skip). Logic: `src/strava/match.ts` |
+| Merging | Never overwrites what was typed: empty fields filled, laps become pieces only if none were logged, equal-count pieces get missing HR/watts/rate. The session keeps `source: 'manual'` and gains `externalId`. Strava-only sessions not edited since import are replaced wholesale when their details arrive |
+| Plan | A new activity on a day with exactly one unlogged, unskipped planned session in that sport gets its `planId` (and `workoutId`), so it counts as done in Analysis |
+| Deletes | Deleted imports and skipped activities stay out on later syncs; "Bring back skipped activities" lets them return |
+| Branding | "View on Strava" links in Strava orange (`text-strava` token) on imported sessions and review items, per Strava's guidelines |
+| Not yet | HR zone times (needs a zones call per activity), streams, writing back to Strava, webhooks (need a public server) |
 
 ## Parked for later (noted 23 Oct 2026)
 
