@@ -5,6 +5,7 @@ import { todayIso } from '../log/format'
 import { addDays } from '../plan/dates'
 import { usePlan } from '../plan/PlanStore'
 import type { Session } from '../log/types'
+import { kindLabel } from '../log/sports'
 import {
   NotConnected,
   RateLimited,
@@ -20,6 +21,7 @@ import {
 } from './api'
 import { fillFrom, toSession } from './convert'
 import { planImport, plannedFor, type ReviewItem } from './match'
+import { findMultisport, manualEventFor, raceFor } from './multisport'
 
 // The Strava connection and sync. localStorage (`tt-strava-v1`) holds the tokens, what's
 // been imported and anything waiting for review; this file is the only one that touches it.
@@ -32,6 +34,8 @@ export interface SyncResult {
   linked: number
   review: number
   details: number
+  /** Duathlons and triathlons put back together from their legs. */
+  grouped?: string[]
   message?: string
   error?: boolean
 }
@@ -91,7 +95,7 @@ const localMidnightEpoch = (iso: string) => Math.floor(new Date(`${iso}T00:00:00
 function upgraded(existing: Session, fresh: SessionDraft): Session | undefined {
   const untouched = existing.source === 'strava' && existing.createdAt === existing.updatedAt
   if (!untouched) return fillFrom(existing, fresh)
-  return { ...fresh, id: existing.id, createdAt: existing.createdAt, updatedAt: existing.updatedAt, planId: existing.planId, workoutId: existing.workoutId, multisportId: existing.multisportId, title: fresh.title ?? existing.title }
+  return { ...fresh, id: existing.id, createdAt: existing.createdAt, updatedAt: existing.updatedAt, planId: existing.planId, workoutId: existing.workoutId, multisportId: existing.multisportId, title: fresh.title ?? existing.title, durationSec: existing.multisportId ? existing.durationSec : fresh.durationSec }
 }
 
 export function StravaProvider({ children }: { children: ReactNode }) {
@@ -99,16 +103,18 @@ export function StravaProvider({ children }: { children: ReactNode }) {
   const [server, setServer] = useState<ServerStatus>()
   const [syncing, setSyncing] = useState(false)
   const log = useLog()
-  const { planned } = usePlan()
+  const { planned, events } = usePlan()
 
   // The sync is async; refs give it the latest data rather than what it started with.
   const dataRef = useRef(data)
   const logRef = useRef(log)
   const plannedRef = useRef(planned)
+  const eventsRef = useRef(events)
   useLayoutEffect(() => {
     dataRef.current = data
     logRef.current = log
     plannedRef.current = planned
+    eventsRef.current = events
   })
   const running = useRef(false)
 
@@ -168,8 +174,14 @@ export function StravaProvider({ children }: { children: ReactNode }) {
       for (const id of d.needDetail) if (!detailed.has(id)) await fetchDetail(id)
 
       const drafts = fresh.map((a) => toSession(detailed.get(String(a.id)) ?? a))
-      const { sessions, saveSession } = logRef.current
-      const plan = planImport(drafts, sessions)
+      // Multisport legs are timed on the clock, so the gaps between them are the transitions.
+      const groups = findMultisport(fresh)
+      const legIds = new Set(groups.flatMap((g) => g.legs.map((i) => drafts[i].externalId)))
+      groups.forEach((g) => g.legs.forEach((i) => (drafts[i].durationSec = fresh[i].elapsed_time || drafts[i].durationSec)))
+
+      const { sessions, multisport, saveSession, saveMultisport } = logRef.current
+      // Legs are matched and linked to the plan as one event below, not one by one.
+      const plan = planImport(drafts.filter((x) => !legIds.has(x.externalId)), sessions)
 
       const logged = new Set(sessions.map((s) => s.planId).filter((x): x is string => !!x))
       for (const draft of plan.create) {
@@ -186,6 +198,33 @@ export function StravaProvider({ children }: { children: ReactNode }) {
         const next = existing && fillFrom(existing, m.draft)
         if (next) saveSession(next)
         result.merged++
+      }
+
+      // Put duathlons and triathlons back together. If the event was logged by hand, Strava
+      // fills in its legs; otherwise the legs are imported and grouped into a new event.
+      for (const g of groups) {
+        const legDrafts = g.legs.map((i) => drafts[i])
+        const date = legDrafts[0].date
+        const manual = manualEventFor(date, g, legDrafts.map((x) => x.sport), multisport, sessions)
+        if (manual) {
+          manual.legs.forEach((leg, k) => {
+            const next = fillFrom(leg, legDrafts[k])
+            if (next) saveSession(next)
+          })
+          result.merged += legDrafts.length
+          continue
+        }
+        const legs = legDrafts.map((x) => saveSession(x))
+        result.created += legs.length
+        const race = raceFor(date, g.kind, eventsRef.current)
+        const planRace = race && plannedRef.current.find((p) => p.eventId === race.id && p.date === date && !logged.has(p.id))
+        const sessionsForEvent = legs.map((l, k) => (k === 0 && planRace ? { ...l, planId: planRace.id } : l))
+        if (planRace) {
+          logged.add(planRace.id)
+          result.linked++
+        }
+        saveMultisport({ kind: g.kind, date, title: race?.name, race: !!race || legs.some((l) => l.type === 'race') }, sessionsForEvent)
+        result.grouped = [...(result.grouped ?? []), race?.name ?? kindLabel(g.kind)]
       }
 
       // Older imports that were waiting for their details.

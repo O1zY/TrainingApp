@@ -35,6 +35,7 @@ function resultLine(r: SyncResult) {
   const parts = [
     r.created && `${r.created} imported`,
     r.merged && `${r.merged} matched to sessions you’d logged`,
+    r.grouped?.length && `${r.grouped.join(', ')} put back together from ${r.grouped.length === 1 ? 'its' : 'their'} legs`,
     r.linked && `${r.linked} ticked off the plan`,
     r.review && `${r.review} to check`,
   ].filter(Boolean)
@@ -297,6 +298,7 @@ export default function StravaPage() {
           <li>An activity on the same day and in the same sport as a session you logged by hand is the same session when the start time, duration or distance agree, or it’s the only one either way round.</li>
           <li>Merging never overwrites what you typed (RPE, notes, pieces and targets stay). Empty fields are filled in from Strava, and laps become pieces if you hadn’t logged any.</li>
           <li>New activities on a day with one planned session in that sport are ticked off the plan.</li>
+          <li>Run → bike → run and swim → bike → run on the same day, each leg starting within 15 minutes of the last finishing, become a duathlon or triathlon with the transitions worked out from the gaps. If the plan has that race on the day, it takes the race’s name and ticks off its session.</li>
           <li>Rowing with no GPS (a Concept2 upload, say) comes in as erg. Laps that look like a workout become pieces; automatic 1km or mile splits don’t.</li>
         </ul>
       </Card>

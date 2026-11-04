@@ -41,7 +41,8 @@ const relDiff = (a: number, b: number) => Math.abs(a - b) / Math.max(a, b)
 
 /** Score for an activity against a manual session, or undefined if they can't be the same thing. */
 export function matchScore(activity: SessionDraft, s: Session): number | undefined {
-  if (s.date !== activity.date || s.externalId || s.status !== 'completed' || s.sport === 'transition') return undefined
+  // Legs of a multisport event are matched as a whole event, not one by one.
+  if (s.date !== activity.date || s.externalId || s.multisportId || s.status !== 'completed' || s.sport === 'transition') return undefined
   const fit = sportFit(activity.sport, s.sport)
   if (!fit) return undefined
   let score = fit === 'same' ? 1 : 0
