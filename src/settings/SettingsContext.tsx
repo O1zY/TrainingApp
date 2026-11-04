@@ -1,5 +1,6 @@
 import { zonesFromMax } from './hrZones'
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, type ReactNode } from 'react'
+import { KEYS, useStoredState } from '../storage'
 
 export type ThemePref = 'system' | 'light' | 'dark'
 export type Units = 'metric' | 'imperial'
@@ -15,15 +16,12 @@ export interface Settings {
 }
 
 const DEFAULTS: Settings = { theme: 'system', units: 'metric', weekStartsOn: 1, maxHR: 195, hrZoneTops: zonesFromMax(195) }
-const STORAGE_KEY = 'tt-settings'
 
-// Settings live in localStorage until the database section is built.
-function load(): Settings {
-  try {
-    return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}') }
-  } catch {
-    return DEFAULTS
-  }
+// Settings live in localStorage (via src/storage.ts) until the database section is built.
+function parseSettings(saved: Record<string, unknown>): Settings {
+  const s = { ...DEFAULTS, ...saved }
+  if (!Array.isArray(s.hrZoneTops) || s.hrZoneTops.length !== 4) s.hrZoneTops = zonesFromMax(Number(s.maxHR) || DEFAULTS.maxHR)
+  return s
 }
 
 interface SettingsValue {
@@ -34,15 +32,7 @@ interface SettingsValue {
 const SettingsContext = createContext<SettingsValue | null>(null)
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [settings, setSettings] = useState<Settings>(load)
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(settings))
-    } catch {
-      // Storage can be unavailable (private mode); settings still work for this visit.
-    }
-  }, [settings])
+  const [settings, setSettings] = useStoredState(KEYS.settings, parseSettings)
 
   useEffect(() => {
     const media = matchMedia('(prefers-color-scheme: dark)')

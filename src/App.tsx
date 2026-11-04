@@ -1,27 +1,52 @@
+import { lazy, type ComponentType } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AppShell } from './layout/AppShell'
 import { LogProvider } from './log/LogStore'
-import Home from './pages/Home'
-import LogHome from './pages/log/LogHome'
-import Maxes from './pages/log/Maxes'
-import { EditMultisport, MultisportDetail, NewMultisport } from './pages/log/Multisport'
-import SessionDetail from './pages/log/SessionDetail'
-import { EditSession, NewSession } from './pages/log/SessionForm'
-import { WellbeingDetail, WellbeingForm } from './pages/log/Wellbeing'
-import LibraryHome from './pages/library/LibraryHome'
-import WorkoutDetail from './pages/library/WorkoutDetail'
-import { EditWorkout, NewWorkout } from './pages/library/WorkoutForm'
-import AnalysisHome from './pages/analysis/AnalysisHome'
-import { EditBlock, NewBlock } from './pages/plan/BlockForm'
-import Events, { EditEvent, NewEvent } from './pages/plan/Events'
-import PlanHome from './pages/plan/PlanHome'
-import PlannedDetail, { EditPlanned, NewPlanned } from './pages/plan/PlannedDetail'
-import Work from './pages/plan/Work'
 import { PlanProvider } from './plan/PlanStore'
-import Settings from './pages/Settings'
-import StravaPage, { StravaCallback } from './pages/log/Strava'
-import { StravaProvider } from './strava/StravaStore'
 import { SettingsProvider } from './settings/SettingsContext'
+import { StravaProvider } from './strava/StravaStore'
+
+// Each page loads when first opened, so the first screen doesn't wait for every chart and form.
+// `pick` turns a named export into the default export lazy() wants.
+const pick = <M, K extends keyof M>(load: () => Promise<M>, name: K) => lazy(() => load().then((m) => ({ default: m[name] as ComponentType })))
+
+const Home = lazy(() => import('./pages/Home'))
+const LogHome = lazy(() => import('./pages/log/LogHome'))
+const Maxes = lazy(() => import('./pages/log/Maxes'))
+const multisport = () => import('./pages/log/Multisport')
+const NewMultisport = pick(multisport, 'NewMultisport')
+const EditMultisport = pick(multisport, 'EditMultisport')
+const MultisportDetail = pick(multisport, 'MultisportDetail')
+const SessionDetail = lazy(() => import('./pages/log/SessionDetail'))
+const sessionForm = () => import('./pages/log/SessionForm')
+const NewSession = pick(sessionForm, 'NewSession')
+const EditSession = pick(sessionForm, 'EditSession')
+const wellbeing = () => import('./pages/log/Wellbeing')
+const WellbeingDetail = pick(wellbeing, 'WellbeingDetail')
+const WellbeingForm = pick(wellbeing, 'WellbeingForm')
+const LibraryHome = lazy(() => import('./pages/library/LibraryHome'))
+const WorkoutDetail = lazy(() => import('./pages/library/WorkoutDetail'))
+const workoutForm = () => import('./pages/library/WorkoutForm')
+const NewWorkout = pick(workoutForm, 'NewWorkout')
+const EditWorkout = pick(workoutForm, 'EditWorkout')
+const AnalysisHome = lazy(() => import('./pages/analysis/AnalysisHome'))
+const blockForm = () => import('./pages/plan/BlockForm')
+const NewBlock = pick(blockForm, 'NewBlock')
+const EditBlock = pick(blockForm, 'EditBlock')
+const events = () => import('./pages/plan/Events')
+const Events = lazy(events)
+const NewEvent = pick(events, 'NewEvent')
+const EditEvent = pick(events, 'EditEvent')
+const PlanHome = lazy(() => import('./pages/plan/PlanHome'))
+const plannedDetail = () => import('./pages/plan/PlannedDetail')
+const PlannedDetail = lazy(plannedDetail)
+const NewPlanned = pick(plannedDetail, 'NewPlanned')
+const EditPlanned = pick(plannedDetail, 'EditPlanned')
+const Work = lazy(() => import('./pages/plan/Work'))
+const Settings = lazy(() => import('./pages/Settings'))
+const strava = () => import('./pages/log/Strava')
+const StravaPage = lazy(strava)
+const StravaCallback = pick(strava, 'StravaCallback')
 
 export default function App() {
   return (

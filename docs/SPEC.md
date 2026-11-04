@@ -16,7 +16,7 @@ part training tool (plan programmes, reuse sessions, analyse progress) across ev
 | Units | User-selectable; default metric (km, kg). Rowing splits always /500m |
 | Week | Starts Monday by default (setting) |
 | Stack | React + TypeScript + Vite + Tailwind v4; Supabase for data/auth when the data sections start |
-| Existing project | Deliberately ignored for now so it doesn't bias the design; linking is a late, separate section |
+| Existing project | Deliberately ignored so it doesn't bias the design. On 4 Nov 2026 linking it (an earlier artifact) was parked: section 7 became making the app solid instead |
 
 ## Build sections (one per session)
 
@@ -26,7 +26,7 @@ part training tool (plan programmes, reuse sessions, analyse progress) across ev
 4. **Programme planner** ✅ — blocks → weeks → sessions, target races, schedule around work
 5. **Analysis** ✅ — training load, PBs, planned vs completed, per-sport trends
 6. **Strava import** ✅ — OAuth + activity sync, dedupe against manual logs
-7. **Link to existing project** — scope decided at that point
+7. **Solid foundations** ✅ — safe storage, backup/restore, crash guard, faster loading, unit tests (replaced "link to existing project", now parked)
 
 ## Session logging decisions (agreed 23 Oct 2026)
 
@@ -109,7 +109,23 @@ rep drift. HR zones live in Settings (max HR, editable zone tops, default 60/70/
 | Branding | "View on Strava" links in Strava orange (`text-strava` token) on imported sessions and review items, per Strava's guidelines |
 | Not yet | HR zone times (needs a zones call per activity), streams, writing back to Strava, webhooks (need a public server) |
 
+## Solid foundations decisions (4 Nov 2026)
+
+| Topic | Decision |
+|---|---|
+| Storage | Every store reads and writes through `src/storage.ts` (`useStoredState`). Keys: `tt-settings`, `tt-log-v1`, `tt-plan-v1`, `tt-strava-v1` (`KEYS`). Saved fields of the wrong shape (e.g. `sessions` not an array) fall back to their default (`withArrays`) |
+| Unreadable saves | Copied to `<key>.corrupt-<time>` before anything can overwrite them, and a banner says so. Nothing is ever silently replaced |
+| Failed saves | If the browser refuses a write (full, private mode) a banner stays up saying changes aren't being saved, pointing at the backup |
+| Tabs | A save in one tab is picked up by the others (`storage` event), so two open tabs don't overwrite each other |
+| Backups | Settings › Your data: download one JSON file of every store, restore from one (preview of what's in it, then all-or-nothing replace and reload). Strava tokens are never in the file; a restore keeps the current connection. `tt-meta` remembers the last backup; Home nudges once 5+ sessions are logged and there's been no backup for 14 days. Logic: `src/backup.ts` |
+| Persistence | `navigator.storage.persist()` asked on each visit; Settings shows whether the browser has agreed and how much is used |
+| Crashes | An error boundary per page (reset on navigation) shows what went wrong with Reload / Download backup, keeping the nav usable; a top-level one covers the stores |
+| Loading | Pages are lazy-loaded per route; first load went from 539 kB to 248 kB of JS |
+| Tests | Vitest (`npm test`) on the pure logic: storage, backups, time/pace/watts formatting, training load, the build/deload cycle, Strava sport mapping, laps → pieces, dedupe scoring and multisport grouping |
+
 ## Parked for later (noted 23 Oct 2026)
+
+- **Link to the existing project** (an earlier artifact). Parked 4 Nov 2026 in favour of making this app solid first.
 
 - **Garmin import** for the morning check-in (no personal-use API); revisit later.
 - **Outward calendar sync.** Writing planned sessions back into Google Calendar.

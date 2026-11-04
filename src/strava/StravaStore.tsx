@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import type { SessionDraft } from '../log/LogStore'
 import { useLog } from '../log/LogStore'
+import { KEYS, useStoredState, withArrays } from '../storage'
 import { todayIso } from '../log/format'
 import { addDays } from '../plan/dates'
 import { usePlan } from '../plan/PlanStore'
@@ -23,7 +24,7 @@ import { fillFrom, toSession } from './convert'
 import { planImport, plannedFor, type ReviewItem } from './match'
 import { findMultisport, manualEventFor, raceFor } from './multisport'
 
-// The Strava connection and sync. localStorage (`tt-strava-v1`) holds the tokens, what's
+// The Strava connection and sync. localStorage (`tt-strava-v1`, via src/storage.ts) holds the tokens, what's
 // been imported and anything waiting for review; this file is the only one that touches it.
 // Sessions themselves go through the log store like any other.
 
@@ -56,7 +57,6 @@ interface StravaData {
   lastResult?: SyncResult
 }
 
-const STORAGE_KEY = 'tt-strava-v1'
 const EMPTY: StravaData = { importFrom: addDays(todayIso(), -84), handled: [], needDetail: [], review: [] }
 /** Detail reads per sync. Strava allows 100 reads per 15 minutes; this leaves room for the list and a second sync. */
 const DETAIL_BUDGET = 60
@@ -64,13 +64,7 @@ const DETAIL_BUDGET = 60
 const OVERLAP_DAYS = 3
 const AUTO_SYNC_MIN = 30
 
-function load(): StravaData {
-  try {
-    return { ...EMPTY, ...JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}') }
-  } catch {
-    return EMPTY
-  }
-}
+const parseStrava = (saved: Record<string, unknown>): StravaData => withArrays(EMPTY, saved)
 
 export type ReviewChoice = { merge: string } | 'new' | 'skip'
 
@@ -99,7 +93,7 @@ function upgraded(existing: Session, fresh: SessionDraft): Session | undefined {
 }
 
 export function StravaProvider({ children }: { children: ReactNode }) {
-  const [data, setData] = useState<StravaData>(load)
+  const [data, setData] = useStoredState(KEYS.strava, parseStrava)
   const [server, setServer] = useState<ServerStatus>()
   const [syncing, setSyncing] = useState(false)
   const log = useLog()
@@ -119,18 +113,10 @@ export function StravaProvider({ children }: { children: ReactNode }) {
   const running = useRef(false)
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
-    } catch {
-      // Storage unavailable; the connection lasts for this visit.
-    }
-  }, [data])
-
-  useEffect(() => {
     serverStatus().then(setServer)
   }, [])
 
-  const patch = (p: Partial<StravaData>) => setData((d) => ({ ...d, ...p }))
+  const patch = useCallback((p: Partial<StravaData>) => setData((d) => ({ ...d, ...p })), [setData])
 
   const token = useCallback(async () => {
     const t = dataRef.current.tokens
@@ -140,7 +126,7 @@ export function StravaProvider({ children }: { children: ReactNode }) {
     dataRef.current = { ...dataRef.current, tokens: fresh }
     setData((d) => ({ ...d, tokens: fresh }))
     return fresh.accessToken
-  }, [])
+  }, [setData])
 
   const sync = useCallback(async (): Promise<SyncResult | undefined> => {
     if (running.current || !dataRef.current.tokens) return undefined
@@ -263,7 +249,7 @@ export function StravaProvider({ children }: { children: ReactNode }) {
       setSyncing(false)
     }
     return result
-  }, [token])
+  }, [token, patch, setData])
 
   // Catch up quietly when the app opens, at most every half hour.
   const autoRan = useRef(false)
