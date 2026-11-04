@@ -6,6 +6,7 @@ import { chip } from '../../components/styles'
 import { Card, EmptyState, PageHeader, Segmented, StatTile } from '../../components/ui'
 import { FATIGUE_DAYS, FITNESS_DAYS, RATIO_LABEL, counted, loadSeries, missingRpe, ratioBand, type RatioBand } from '../../analysis/load'
 import { distancePbs, liftPbs } from '../../analysis/pbs'
+import { BAND_LABEL, DRIVER_LABEL, METRICS, MIN_PAIRS, bandCuts, byBand, describe, links, pairUp, type MetricKey, type Strength } from '../../analysis/wellbeing'
 import { adherence, weekStarts, weeklyBySport, type VolumeMetric } from '../../analysis/weekly'
 import { PACE_LABEL, distanceFactor, formatDate, formatPace, formatTime, formatWeight, paceKind, paceValue, todayIso, weightUnit } from '../../log/format'
 import { useLog } from '../../log/LogStore'
@@ -66,6 +67,7 @@ export default function AnalysisHome() {
       <PageHeader title="Analysis" subtitle="Load, progress and personal bests" action={<Segmented value={range} options={RANGES} onChange={setRange} />} />
       <div className="space-y-5">
         <LoadSection from={from} today={today} />
+        <WellbeingSection from={from} today={today} />
         <AdherenceSection weeks={weeks} today={today} hasPlan={planned.length > 0} />
         <TrendsSection weeks={weeks} metric={metric} setMetric={setMetric} />
         <PbSection />
@@ -126,6 +128,94 @@ function LoadSection({ from, today }: { from: string; today: string }) {
         </p>
       </Card>
     </>
+  )
+}
+
+const STRENGTH_LABEL: Record<Strength, string> = { none: 'No link', weak: 'Weak', moderate: 'Moderate', strong: 'Strong' }
+
+function WellbeingSection({ from, today }: { from: string; today: string }) {
+  const { sessions, wellbeing } = useLog()
+  const [pick, setPick] = useState<MetricKey>()
+  const series = loadSeries(sessions, today)
+  const pairs = pairUp(wellbeing, series, from, today)
+  const checkIns = wellbeing.filter((w) => w.date >= from && w.date <= today).length
+
+  if (pairs.length < MIN_PAIRS) {
+    return (
+      <Card title="Wellbeing vs load">
+        <p className="text-sm text-muted">
+          Once there are {MIN_PAIRS}+ <Link to={`/log/wellbeing/${today}/edit`} className="font-medium text-accent-strong">daily check-ins</Link> in this range alongside
+          sessions with an RPE, this shows which of sleep, HRV, soreness, mood and the rest move with your training load.{' '}
+          {checkIns > 0 && `${pairs.length} of ${MIN_PAIRS} so far.`}
+        </p>
+      </Card>
+    )
+  }
+
+  const found = links(pairs).filter((l) => l.strength !== 'none')
+  const shownMetrics = METRICS.filter((m) => pairs.some((p) => m.get(p.w) != null))
+  const metric = shownMetrics.find((m) => m.key === pick) ?? shownMetrics.find((m) => m.key === 'wellness') ?? shownMetrics[0]
+  const cuts = bandCuts(series.filter((d) => d.date >= addDays(from, -1) && d.date < today).map((d) => d.load))
+  const rows = cuts && metric ? byBand(pairs, metric, cuts) : []
+  const isScale = metric && !['sleepHours', 'restingHr', 'hrv'].includes(metric.key)
+  const top = isScale ? 5 : Math.max(1, ...rows.map((r) => r.mean ?? 0)) * 1.1
+
+  return (
+    <Card title="Wellbeing vs load" action={<span className="tabular text-sm text-muted">{pairs.length} check-ins</span>}>
+      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">What goes together</h3>
+      {found.length === 0 ? (
+        <p className="text-sm text-muted">Nothing stands out yet: none of your check-in scores move much with load. That can change as more days come in.</p>
+      ) : (
+        <ul className="space-y-1.5">
+          {found.slice(0, 6).map((l) => (
+            <li key={`${l.metric.key}-${l.driver}`} className="flex items-start gap-3 rounded-xl px-2 py-1.5">
+              <span className={`mt-1.5 size-2 shrink-0 rounded-full ${l.goodWithLoad ? 'bg-hit' : 'bg-over'}`} aria-hidden />
+              <span className="min-w-0 flex-1 text-sm">
+                {describe(l)}
+                <span className="block text-xs text-muted">
+                  {l.goodWithLoad ? 'Good sign' : 'Worth watching'} · {DRIVER_LABEL[l.driver]} · {STRENGTH_LABEL[l.strength]} (r = {l.r.toFixed(2)}, {l.n} days)
+                </span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {metric && cuts && (
+        <div className="mt-5 border-t border-line pt-4">
+          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">The morning after</h3>
+          <div className="-mx-1 mb-3 flex gap-2 overflow-x-auto px-1 pb-1">
+            {shownMetrics.map((m) => (
+              <button key={m.key} type="button" className={chip(m.key === metric.key)} onClick={() => setPick(m.key)}>
+                {m.label}
+              </button>
+            ))}
+          </div>
+          <ul className="space-y-2">
+            {rows.map((r) => (
+              <li key={r.band} className="grid grid-cols-[5.5rem_1fr_6.5rem] items-center gap-3 text-sm">
+                <span className="font-medium">{BAND_LABEL[r.band]}</span>
+                <span className="h-3 overflow-hidden rounded-full bg-surface-2">
+                  {r.mean != null && <span className="block h-full rounded-full bg-accent" style={{ width: `${Math.min(100, (r.mean / top) * 100)}%` }} />}
+                </span>
+                <span className="tabular text-right">
+                  {r.mean != null ? <span className="font-semibold">{metric.format(r.mean)}</span> : <span className="text-muted">—</span>}
+                  <span className="text-xs text-muted"> · {r.n}d</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 text-xs text-muted">
+            Average {metric.label.toLowerCase()} ({metric.better} is better) on mornings after each kind of day. Light, moderate and hard are thirds of your own training days in
+            this range: up to {Math.round(cuts[0])}, up to {Math.round(cuts[1])} and above {Math.round(cuts[1])} load.
+          </p>
+        </div>
+      )}
+      <p className="mt-4 text-xs text-muted">
+        Each check-in is set against the load before it: the day before, and the {FATIGUE_DAYS}-day weighted load to the day before. Links use rank correlation (r from −1 to 1;
+        below 0.2 is left out) and show what tends to go together, not what causes what.
+      </p>
+    </Card>
   )
 }
 

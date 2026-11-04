@@ -27,6 +27,9 @@ part training tool (plan programmes, reuse sessions, analyse progress) across ev
 5. **Analysis** ✅ — training load, PBs, planned vs completed, per-sport trends
 6. **Strava import** ✅ — OAuth + activity sync, dedupe against manual logs
 7. **Solid foundations** ✅ — safe storage, backup/restore, crash guard, faster loading, unit tests (replaced "link to existing project", now parked)
+8. **Wellbeing vs load** ✅ — which check-in scores move with training load (Analysis)
+9. **Planned sessions → Google Calendar** — write the plan out to a calendar of its own
+10. **Sync across devices** — one copy of the data in a database, shared by phone and laptop
 
 ## Session logging decisions (agreed 23 Oct 2026)
 
@@ -123,13 +126,22 @@ rep drift. HR zones live in Settings (max HR, editable zone tops, default 60/70/
 | Loading | Pages are lazy-loaded per route; first load went from 539 kB to 248 kB of JS |
 | Tests | Vitest (`npm test`) on the pure logic: storage, backups, time/pace/watts formatting, training load, the build/deload cycle, Strava sport mapping, laps → pieces, dedupe scoring and multisport grouping |
 
+## Wellbeing vs load decisions (4 Nov 2026)
+
+| Topic | Decision |
+|---|---|
+| Pairing | Each check-in in the Analysis range is set against the load before it (check-ins are taken as morning ones): the day before's load, and the 7-day weighted load (fatigue) to the day before. Check-ins before the first logged load are left out; after it, a day with nothing logged is rest |
+| Measures | Wellness score, sleep hours and quality, resting HR, HRV, energy, mood, motivation, soreness, tiredness, stress, each with which way is good |
+| Links | Spearman rank correlation per measure × (day before, 7-day), shown when there are 10+ pairs and \|r\| ≥ 0.2, banded weak / moderate / strong at 0.2 / 0.4 / 0.6, strongest first, in plain English ("Soreness is clearly higher the morning after a bigger day") marked good sign / worth watching. Worded as going together, never as cause |
+| Morning after | Average of a chosen measure after rest, light, moderate and hard days; light/moderate/hard are thirds of the athlete's own non-zero daily loads in the range |
+| Logic | `src/analysis/wellbeing.ts` (tested) |
+
 ## Parked for later (noted 23 Oct 2026)
 
 - **Link to the existing project** (an earlier artifact). Parked 4 Nov 2026 in favour of making this app solid first.
 
 - **Garmin import** for the morning check-in (no personal-use API); revisit later.
 - **Outward calendar sync.** Writing planned sessions back into Google Calendar.
-- **Wellbeing vs load.** Check-ins are stored alongside training; correlating them (sleep, HRV, soreness against load) is a natural Analysis follow-up.
 - **Adaptive coaching.** The miss thresholds in `src/log/targets.ts` are a flat start. A later coaching
   feature should learn from logged sessions and check-ins and adjust how strictly reps are judged:
   harsher when there's room to push, more forgiving after poor sleep, high soreness or a fading block.
