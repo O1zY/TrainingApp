@@ -12,7 +12,7 @@ part training tool (plan programmes, reuse sessions, analyse progress) across ev
 | Core jobs | Plan programmes · Log sessions · Analyse progress · Session library |
 | Data in | Manual logging + Strava import (no double entry) |
 | Navigation | Dashboard home + tabs: Home · Plan · Log · Library · Analysis (Settings via gear) |
-| Look | Auto light/dark following the device, with manual override |
+| Look | Auto light/dark following the device, with manual override. Sleek "two calm + one bold" palette: neutral base, soft lavender-grey, purple as the bold main colour (agreed 4 Nov 2026) |
 | Units | User-selectable; default metric (km, kg). Rowing splits always /500m |
 | Week | Starts Monday by default (setting) |
 | Stack | React + TypeScript + Vite + Tailwind v4; Supabase for data/auth when the data sections start |

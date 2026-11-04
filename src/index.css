@@ -4,70 +4,83 @@
  * Design tokens. Every colour in the app comes from here so light and dark
  * stay in step. Components use the Tailwind names mapped in @theme below
  * (bg-surface, text-muted, border-line, bg-accent, text-sport-row, ...).
+ *
+ * Palette rule: two calm colours and one bold one.
+ *   Calm 1 – the neutral base: page and card backgrounds, body text.
+ *   Calm 2 – a soft lavender-grey: secondary surfaces, lines, muted text.
+ *   Bold   – purple (accent): primary actions, active nav, key numbers.
+ * The bold colour is used sparingly so it always reads as "look here".
+ * Sport, status and phase colours are kept muted so they don't compete.
  */
 :root {
-  --bg: #f6f7f9;
+  /* Calm 1 */
+  --bg: #f7f7fa;
   --surface: #ffffff;
-  --surface-2: #eef0f3;
-  --line: #e2e5ea;
-  --text: #111418;
-  --muted: #5d6673;
-  --accent: #0f9d76;
-  --accent-strong: #0b7f5f;
-  --accent-soft: #dcf3eb;
+  --text: #17151f;
+  /* Calm 2 */
+  --surface-2: #efeef5;
+  --line: #e4e2ec;
+  --muted: #64607a;
+  /* Bold */
+  --accent: #7c3aed;
+  --accent-strong: #6425d0;
+  --accent-soft: #f0eafe;
   --on-accent: #ffffff;
 
   /* One colour per discipline, reused by logs, plans and charts. */
-  --sport-row: #2563eb;
-  --sport-run: #e05a1c;
-  --sport-bike: #b4870b;
-  --sport-swim: #0369a1;
-  --sport-strength: #7c3aed;
-  --sport-recovery: #0e9f9f;
+  --sport-row: #3f6fd1;
+  --sport-run: #d9692b;
+  --sport-bike: #b38a14;
+  --sport-swim: #1c8bb3;
+  --sport-strength: #c94f7c;
+  --sport-recovery: #1b9a8a;
 
   /* Target status: on target / harder than asked / missed (shades near → far). */
-  --hit: #0f9d76;
+  --hit: #17935f;
   --over: #c27c0e;
   --miss-near: #e8837c;
   --miss-far: #8e1212;
 
-  /* Training cycle phases in the planner. */
-  --phase-build: #0f9d76;
-  --phase-deload: #64748b;
+  /* Training cycle phases in the planner. Race is the one that shouts. */
+  --phase-build: #6f6a92;
+  --phase-deload: #9d99b5;
   --phase-taper: #c27c0e;
-  --phase-race: #d6336c;
+  --phase-race: #7c3aed;
 
   color-scheme: light;
 }
 
 :root[data-theme="dark"] {
-  --bg: #0c0e12;
-  --surface: #15181e;
-  --surface-2: #1d2129;
-  --line: #2a2f39;
-  --text: #eef1f5;
-  --muted: #98a1ae;
-  --accent: #34d399;
-  --accent-strong: #6ee7b7;
-  --accent-soft: #10342a;
-  --on-accent: #06251b;
+  /* Calm 1 */
+  --bg: #0e0d13;
+  --surface: #16151d;
+  --text: #f1f0f6;
+  /* Calm 2 */
+  --surface-2: #201e2a;
+  --line: #2d2b39;
+  --muted: #9e9ab0;
+  /* Bold */
+  --accent: #a17bf7;
+  --accent-strong: #c2aaff;
+  --accent-soft: #2a2146;
+  --on-accent: #170b33;
 
-  --sport-row: #60a5fa;
-  --sport-run: #fb8a52;
-  --sport-bike: #facc15;
-  --sport-swim: #38bdf8;
-  --sport-strength: #a78bfa;
-  --sport-recovery: #2dd4bf;
+  --sport-row: #79a0ee;
+  --sport-run: #f0905a;
+  --sport-bike: #e2c04a;
+  --sport-swim: #5cc0e4;
+  --sport-strength: #ec8cb0;
+  --sport-recovery: #4fc9b8;
 
-  --hit: #34d399;
+  --hit: #3ec98f;
   --over: #fbbf24;
   --miss-near: #fecaca;
   --miss-far: #ef3333;
 
-  --phase-build: #34d399;
-  --phase-deload: #94a3b8;
+  --phase-build: #a9a4c4;
+  --phase-deload: #6f6b87;
   --phase-taper: #fbbf24;
-  --phase-race: #f472b6;
+  --phase-race: #a17bf7;
 
   color-scheme: dark;
 }
