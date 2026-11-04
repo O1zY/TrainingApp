@@ -115,5 +115,5 @@ export function merge(base: Json, a: Json, b: Json, prefer: Side): Json {
 }
 
 /** Merges two copies of a whole store. */
-export const mergeStores = (base: Obj | undefined, local: Obj, remote: Obj, prefer: Side = base ? 'local' : 'remote') =>
-  merge(base, local, remote, prefer) as Obj
+export const mergeStores = <T extends Obj>(base: Obj | undefined, local: T, remote: Obj, prefer: Side = base ? 'local' : 'remote') =>
+  merge(base, local, remote, prefer) as T
