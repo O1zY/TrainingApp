@@ -11,7 +11,7 @@ import { WellbeingDetail, WellbeingForm } from './pages/log/Wellbeing'
 import LibraryHome from './pages/library/LibraryHome'
 import WorkoutDetail from './pages/library/WorkoutDetail'
 import { EditWorkout, NewWorkout } from './pages/library/WorkoutForm'
-import { Analysis } from './pages/Placeholders'
+import AnalysisHome from './pages/analysis/AnalysisHome'
 import { EditBlock, NewBlock } from './pages/plan/BlockForm'
 import Events, { EditEvent, NewEvent } from './pages/plan/Events'
 import PlanHome from './pages/plan/PlanHome'
@@ -60,7 +60,7 @@ export default function App() {
                   <Route path=":id" element={<WorkoutDetail />} />
                   <Route path=":id/edit" element={<EditWorkout />} />
                 </Route>
-                <Route path="analysis" element={<Analysis />} />
+                <Route path="analysis" element={<AnalysisHome />} />
                 <Route path="settings" element={<Settings />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Route>
