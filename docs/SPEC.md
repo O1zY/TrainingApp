@@ -15,7 +15,7 @@ part training tool (plan programmes, reuse sessions, analyse progress) across ev
 | Look | Auto light/dark following the device, with manual override. Two quiet colours + one loud: oat (warm paper) and ink (deep blue-black, used in solid blocks like the sidebar and today), with violet as the loud main colour. Bricolage Grotesque for headings and big numbers, Figtree for text (agreed 4 Nov 2026) |
 | Units | User-selectable; default metric (km, kg). Rowing splits always /500m |
 | Week | Starts Monday by default (setting) |
-| Stack | React + TypeScript + Vite + Tailwind v4; Supabase for data/auth when the data sections start |
+| Stack | React + TypeScript + Vite + Tailwind v4; Supabase for sync/auth (section 10), localStorage as the working copy |
 | Existing project | Deliberately ignored so it doesn't bias the design. On 4 Nov 2026 linking it (an earlier artifact) was parked: section 7 became making the app solid instead |
 
 ## Build sections (one per session)
@@ -29,7 +29,7 @@ part training tool (plan programmes, reuse sessions, analyse progress) across ev
 7. **Solid foundations** ✅ — safe storage, backup/restore, crash guard, faster loading, unit tests (replaced "link to existing project", now parked)
 8. **Wellbeing vs load** ✅ — which check-in scores move with training load (Analysis)
 9. **Planned sessions → Google Calendar** ✅ — write the plan out to a calendar of its own
-10. **Sync across devices** — one copy of the data in a database, shared by phone and laptop
+10. **Sync across devices** ✅ — one copy of the data in a database, shared by phone and laptop
 
 ## Session logging decisions (agreed 23 Oct 2026)
 
@@ -145,6 +145,21 @@ rep drift. HR zones live in Settings (max HR, editable zone tops, default 60/70/
 | Updates | Each event carries the planned session's id and a fingerprint of its contents (private extended properties), so “Update calendar” reads the calendar and only sends what changed: adds, updates, and removes events from today on that no longer match (skipped, deleted, re-planned away, duplicates). Past events are left as a record. Works the same from any device. A calendar deleted in Google is made again on the next update. Sends four at a time with backoff on rate limits |
 | Auto-update | Optional (“Keep it updated as the plan changes”): a few seconds after the plan or log changes, re-sends, but only while Google access is live in that tab, so it never pops a sign-in up by itself |
 | Code | Mapping and diff `src/plan/calendarOut.ts` (tested); API calls `src/plan/calendar.ts`; `src/plan/pushPlan.ts`; watcher `src/plan/CalendarAutoPush.tsx` (loads the push code only when it fires); UI in Plan › Work & calendar |
+
+## Sync across devices decisions (4 Nov 2026)
+
+| Topic | Decision |
+|---|---|
+| Service | Supabase (as planned in the stack), the person's own free project. Spoken to over its REST APIs, no SDK. `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` (public by design). Schema in `supabase/schema.sql` |
+| Account | Email + password (Supabase Auth). Session in `tt-sync` on the device, never in backups; refreshed on demand, re-read before each refresh so tabs don't clash. Signing out stops syncing and keeps everything in the browser |
+| Shape | One row per store per person (`tt_store`: user, key, JSON data, `rev`). Row level security: own rows only. A trigger only lets `rev` go up by one. localStorage stays the working copy, so the app works offline exactly as before |
+| Writes | Conditional: a device writes revision n+1 only if the row is still at n (PATCH filtered on `rev`); first writes are inserts (409 = someone got there first). Losing a race means pull, merge again on top, retry (up to 4 times) |
+| Merge | Three-way against `tt-sync-base` (the copy and revision this device last agreed with the account). Objects key by key; record lists by `id` (`date` for check-ins, `exercise` for 1RMs): adds on either side kept, deletes carried over, an edit beats a delete; plain lists as sets; a real clash on one value goes to the later `updatedAt`, else this device. With no base (signing in on a device that already has data) both copies are combined and the account wins clashes. Logic `src/sync/merge.ts`, `src/sync/engine.ts` (tested with two fake devices) |
+| Live updates | Sync applies merged data through `replaceStored` (`src/storage.ts`), which updates the open pages at once and refuses while an edit is mid-save (that store waits for the next round), so nothing typed is overwritten |
+| Strava | Tokens never leave the device that connected; imported ids, review queue and settings sync, so dedupe holds across devices. If two devices import the same activity at once, the duplicate session (same `externalId`) is dropped after the merge |
+| When | On opening, 3s after any change, on coming back into view (if 30s+ since the last), on going back online, and every 5 min while visible. One tab at a time via Web Locks. Status and errors in Settings › Sync across devices |
+| Backups | Still offered. A restore while signed in replaces the account's copy too (said in the confirm), since the restored data is newer than the base |
+| Not yet | Realtime push from the server (changes arrive on the next sync instead), deleting the account's data from inside the app (delete the rows or the user in Supabase) |
 
 ## Parked for later (noted 23 Oct 2026)
 
