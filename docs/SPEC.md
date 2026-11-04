@@ -24,7 +24,7 @@ part training tool (plan programmes, reuse sessions, analyse progress) across ev
 2. **Session logging** ✅ — fast entry per sport, sport-specific fields, RPE/notes
 3. **Session library** ✅ — reusable workouts/templates, log-from-template
 4. **Programme planner** ✅ — blocks → weeks → sessions, target races, schedule around work
-5. **Analysis** — training load, PBs, planned vs completed, per-sport trends
+5. **Analysis** ✅ — training load, PBs, planned vs completed, per-sport trends
 6. **Strava import** — OAuth + activity sync, dedupe against manual logs
 7. **Link to existing project** — scope decided at that point
 
@@ -80,10 +80,23 @@ rep drift. HR zones live in Settings (max HR, editable zone tops, default 60/70/
 | Re-planning | Automatic after saving shifts, events or the block; by hand from Plan. Logged, past, moved or edited sessions are never replaced |
 | Logging | `/log/new?plan=id` pre-fills from the planned workout; the session keeps `planId` for planned vs done in Analysis |
 
+## Analysis decisions (4 Nov 2026)
+
+| Topic | Decision |
+|---|---|
+| Range | 4 weeks, 12 weeks (default), 6 months or 1 year, in whole weeks from the week-start setting |
+| What counts | Completed sessions only; multisport transitions are left out. `counted()` in `src/analysis/load.ts` |
+| Training load | Session-RPE load per day (RPE × minutes). Fitness = 42-day and fatigue = 7-day exponentially weighted averages, form = fitness − fatigue. Acute:chronic = fatigue ÷ fitness, banded <0.8 low, 0.8–1.3 sweet spot, 1.3–1.5 building fast, >1.5 spike. Sessions without an RPE add no load and are counted in a note. Logic: `src/analysis/load.ts` |
+| Planned vs done | Planned sessions that are due (dated before today, or logged): done (a log with its `planId`), skipped on purpose, or missed. Shows % sessions, % key/race sessions, % planned time, off-plan sessions (recovery not counted), a weekly done/skipped/missed chart and the latest misses. Logic: `src/analysis/weekly.ts` |
+| Per-sport trends | Small multiples, one row per sport in a fixed order, of weekly time, distance or load, with total and second-half vs first-half change; plus average pace per week for erg, water, run, bike and swim |
+| PBs | Fastest time over standard distances per sport (erg 500m–half marathon, water 1k/2k/5k, run 1k–marathon, bike 10/20/40k, swim 100–1500m) from a whole session or a single piece within 1.5% of the distance, scaled to the exact distance. Water and erg kept apart. "New" if set in the last 28 days and beating an earlier attempt. Lifts: best Epley e1RM (≤12 reps) and heaviest weight, with an e1RM trend. Logic: `src/analysis/pbs.ts` |
+| Charts | Hand-rolled SVG/HTML in `src/components/charts.tsx`, no chart library. One axis per chart; every chart has a hover/keyboard readout and a legend or labels, so nothing relies on colour alone (the sport colours aren't colour-blind safe next to each other, which is why per-sport views are labelled rows, not stacks) |
+
 ## Parked for later (noted 23 Oct 2026)
 
 - **Garmin import** for the morning check-in (no personal-use API); revisit later.
 - **Outward calendar sync.** Writing planned sessions back into Google Calendar.
+- **Wellbeing vs load.** Check-ins are stored alongside training; correlating them (sleep, HRV, soreness against load) is a natural Analysis follow-up.
 - **Adaptive coaching.** The miss thresholds in `src/log/targets.ts` are a flat start. A later coaching
   feature should learn from logged sessions and check-ins and adjust how strictly reps are judged:
   harsher when there's room to push, more forgiving after poor sleep, high soreness or a fading block.
