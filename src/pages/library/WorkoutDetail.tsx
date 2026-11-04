@@ -11,7 +11,7 @@ import type { Workout } from '../../log/types'
 import { useSettings } from '../../settings/SettingsContext'
 import { Stat } from '../log/SessionDetail'
 
-function Structure({ w }: { w: Workout }) {
+export function Structure({ w }: { w: Workout }) {
   const { settings } = useSettings()
   const groups = groupPieces(w.pieces ?? [])
   return (
@@ -32,7 +32,7 @@ function Structure({ w }: { w: Workout }) {
   )
 }
 
-function Exercises({ w }: { w: Workout }) {
+export function Exercises({ w }: { w: Workout }) {
   const { settings } = useSettings()
   const { maxes } = useLog()
   const wu = weightUnit(settings.units)
@@ -74,7 +74,7 @@ function Exercises({ w }: { w: Workout }) {
   )
 }
 
-function History({ w }: { w: Workout }) {
+export function History({ w }: { w: Workout }) {
   const { sessions } = useLog()
   const { settings } = useSettings()
   const logged = sortSessions(sessions.filter((s) => s.workoutId === w.id))

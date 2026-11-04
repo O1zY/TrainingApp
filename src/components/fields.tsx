@@ -22,6 +22,17 @@ export function Field({ label, unit, hint, children, className = '' }: { label: 
   )
 }
 
+/** Like Field, for a row of buttons: a <label> would give its text to the first button as its name. */
+export function FieldGroup({ label, hint, children, className = '' }: { label: string; hint?: ReactNode; children: ReactNode; className?: string }) {
+  return (
+    <div role="group" aria-label={label} className={`min-w-0 ${className}`}>
+      <span className="mb-1 block text-xs font-medium text-muted">{label}</span>
+      {children}
+      {hint && <span className="mt-1 block text-xs text-muted">{hint}</span>}
+    </div>
+  )
+}
+
 interface ParsedProps<T> {
   value: T | undefined
   onChange: (v: T | undefined) => void
