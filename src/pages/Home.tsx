@@ -15,7 +15,7 @@ import { useSettings } from '../settings/SettingsContext'
 
 function greeting(d: Date) {
   const h = d.getHours()
-  return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening'
+  return h < 12 ? 'Morning' : h < 18 ? 'Afternoon' : 'Evening'
 }
 
 function weekDays(today: Date, weekStartsOn: 0 | 1) {
@@ -50,11 +50,13 @@ export default function Home() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <p className="text-sm text-muted">
+      <div className="pb-2 pt-1">
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
           {today.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
         </p>
-        <h1 className="mt-0.5 text-2xl font-bold tracking-tight md:text-3xl">{greeting(today)}, Ollie</h1>
+        <h1 className="mt-1.5 text-4xl font-bold md:text-5xl">
+          {greeting(today)}, Ollie<span className="text-accent">.</span>
+        </h1>
       </div>
 
       <div className="grid gap-5 lg:grid-cols-3">
@@ -79,10 +81,10 @@ export default function Home() {
               )}
             </div>
             <div className="flex shrink-0 gap-2">
-              <Link to="/log" className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-on-accent hover:opacity-90">
+              <Link to="/log" className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-on-accent hover:brightness-110">
                 Log session
               </Link>
-              <Link to="/plan" className="rounded-lg border border-line px-4 py-2 text-sm font-semibold hover:bg-surface-2">
+              <Link to="/plan" className="rounded-full border border-line px-4 py-2 text-sm font-semibold hover:bg-surface-2">
                 Plan
               </Link>
             </div>
@@ -125,12 +127,12 @@ export default function Home() {
             return (
               <div
                 key={d.toISOString()}
-                className={`flex flex-col items-center rounded-xl py-2.5 md:py-4 ${isToday ? 'bg-accent-soft' : 'bg-surface-2'}`}
+                className={`flex flex-col items-center rounded-2xl py-2.5 md:py-4 ${isToday ? 'bg-contrast text-on-contrast' : 'bg-surface-2'}`}
               >
-                <span className={`text-[11px] font-medium uppercase ${isToday ? 'text-accent-strong' : 'text-muted'}`}>
+                <span className={`text-[11px] font-semibold uppercase tracking-wider ${isToday ? 'opacity-70' : 'text-muted'}`}>
                   {d.toLocaleDateString('en-GB', { weekday: 'short' }).slice(0, 3)}
                 </span>
-                <span className={`tabular mt-0.5 text-lg font-bold ${isToday ? 'text-accent-strong' : ''}`}>{d.getDate()}</span>
+                <span className="tabular font-display mt-0.5 text-xl font-bold md:text-2xl">{d.getDate()}</span>
                 <span className="mt-1.5 flex h-1.5 flex-wrap justify-center gap-0.5">
                   {daySessions.slice(0, 4).map((s) => (
                     <span key={s.id} title={SPORTS[s.sport].label} className={`size-1.5 rounded-full ${SPORTS[s.sport].bg}`} />

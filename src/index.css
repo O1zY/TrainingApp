@@ -3,37 +3,45 @@
 /*
  * Design tokens. Every colour in the app comes from here so light and dark
  * stay in step. Components use the Tailwind names mapped in @theme below
- * (bg-surface, text-muted, border-line, bg-accent, text-sport-row, ...).
+ * (bg-surface, text-muted, bg-ink, bg-accent, text-sport-row, ...).
  *
- * Palette rule: two calm colours and one bold one.
- *   Calm 1 – the neutral base: page and card backgrounds, body text.
- *   Calm 2 – a soft lavender-grey: secondary surfaces, lines, muted text.
- *   Bold   – purple (accent): primary actions, active nav, key numbers.
- * The bold colour is used sparingly so it always reads as "look here".
- * Sport, status and phase colours are kept muted so they don't compete.
+ * Palette: two quiet colours and one loud one.
+ *   Oat (quiet)  – warm paper tones for the page, cards and body text.
+ *   Ink (quiet)  – deep blue-black, used in solid blocks: the sidebar,
+ *                  today in the week strip, headline numbers.
+ *   Violet (loud) – the main colour. Primary actions, active nav, races.
+ *                   Used sparingly so it always means "look here".
+ * Sport, status and phase colours are muted so they don't compete.
  */
 :root {
-  /* Calm 1 */
-  --bg: #f7f7fa;
-  --surface: #ffffff;
-  --text: #17151f;
-  /* Calm 2 */
-  --surface-2: #efeef5;
-  --line: #e4e2ec;
-  --muted: #64607a;
-  /* Bold */
-  --accent: #7c3aed;
-  --accent-strong: #6425d0;
-  --accent-soft: #f0eafe;
+  /* Oat */
+  --bg: #f3efe8;
+  --surface: #fbf9f5;
+  --surface-2: #ece7de;
+  --line: #e2dcd0;
+  --text: #1c1a24;
+  --muted: #6c6777;
+  /* Ink */
+  --ink: #1c1a26;
+  --ink-2: #2a2736;
+  --on-ink: #f3efe8;
+  --ink-muted: #9d99ab;
+  /* The quiet colour that stands out against the page: ink on oat, oat on ink. */
+  --contrast: #1c1a26;
+  --on-contrast: #f3efe8;
+  /* Violet */
+  --accent: #7a3cf2;
+  --accent-strong: #6227d6;
+  --accent-soft: #ebe2fd;
   --on-accent: #ffffff;
 
   /* One colour per discipline, reused by logs, plans and charts. */
-  --sport-row: #3f6fd1;
-  --sport-run: #d9692b;
-  --sport-bike: #b38a14;
-  --sport-swim: #1c8bb3;
-  --sport-strength: #c94f7c;
-  --sport-recovery: #1b9a8a;
+  --sport-row: #3a64b8;
+  --sport-run: #c95d27;
+  --sport-bike: #a67f12;
+  --sport-swim: #1f7f99;
+  --sport-strength: #b84a72;
+  --sport-recovery: #23897a;
 
   /* Target status: on target / harder than asked / missed (shades near → far). */
   --hit: #17935f;
@@ -45,25 +53,29 @@
   --phase-build: #6f6a92;
   --phase-deload: #9d99b5;
   --phase-taper: #c27c0e;
-  --phase-race: #7c3aed;
+  --phase-race: #7a3cf2;
 
   color-scheme: light;
 }
 
 :root[data-theme="dark"] {
-  /* Calm 1 */
-  --bg: #0e0d13;
-  --surface: #16151d;
-  --text: #f1f0f6;
-  /* Calm 2 */
-  --surface-2: #201e2a;
-  --line: #2d2b39;
-  --muted: #9e9ab0;
-  /* Bold */
-  --accent: #a17bf7;
-  --accent-strong: #c2aaff;
-  --accent-soft: #2a2146;
-  --on-accent: #170b33;
+  /* Ink becomes the page; oat becomes the text. */
+  --bg: #15141c;
+  --surface: #1c1a25;
+  --surface-2: #262331;
+  --line: #302d3c;
+  --text: #f3efe8;
+  --muted: #a49faf;
+  --ink: #0f0e14;
+  --ink-2: #1f1d29;
+  --on-ink: #f3efe8;
+  --ink-muted: #8f8b9d;
+  --contrast: #f3efe8;
+  --on-contrast: #1c1a26;
+  --accent: #a47cff;
+  --accent-strong: #c3a8ff;
+  --accent-soft: #2c2347;
+  --on-accent: #14092e;
 
   --sport-row: #79a0ee;
   --sport-run: #f0905a;
@@ -80,7 +92,7 @@
   --phase-build: #a9a4c4;
   --phase-deload: #6f6b87;
   --phase-taper: #fbbf24;
-  --phase-race: #a17bf7;
+  --phase-race: #a47cff;
 
   color-scheme: dark;
 }
@@ -92,6 +104,12 @@
   --color-line: var(--line);
   --color-text: var(--text);
   --color-muted: var(--muted);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-on-ink: var(--on-ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-contrast: var(--contrast);
+  --color-on-contrast: var(--on-contrast);
   --color-accent: var(--accent);
   --color-accent-strong: var(--accent-strong);
   --color-accent-soft: var(--accent-soft);
@@ -110,7 +128,9 @@
   --color-phase-taper: var(--phase-taper);
   --color-phase-race: var(--phase-race);
 
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-sans: "Figtree Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* Headings and headline numbers. A bit of character without shouting. */
+  --font-display: "Bricolage Grotesque Variable", "Figtree Variable", ui-sans-serif, system-ui, sans-serif;
 }
 
 html,
@@ -125,6 +145,23 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
+}
+
+h1,
+h2,
+h3,
+.font-display {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+}
+
+h1 {
+  letter-spacing: -0.03em;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--on-accent);
 }
 
 /* Numbers line up in stat tiles and tables. */

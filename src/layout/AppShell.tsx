@@ -1,4 +1,4 @@
-import { Activity, Settings as SettingsIcon } from 'lucide-react'
+import { Activity, Plus, Settings as SettingsIcon } from 'lucide-react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { NAV } from './nav'
 
@@ -6,8 +6,8 @@ const APP_NAME = 'Training Tracker'
 
 function Brand() {
   return (
-    <div className="flex items-center gap-2.5 font-semibold tracking-tight">
-      <span className="grid size-8 place-items-center rounded-lg bg-accent text-on-accent">
+    <div className="font-display flex items-center gap-2.5 text-[17px] font-bold tracking-tight">
+      <span className="grid size-8 place-items-center rounded-[10px] bg-accent text-on-accent">
         <Activity className="size-4.5" strokeWidth={2.5} />
       </span>
       {APP_NAME}
@@ -15,33 +15,41 @@ function Brand() {
   )
 }
 
+/** Sidebar link: quiet on the ink panel, a violet marker when active. */
+const sideLink = ({ isActive }: { isActive: boolean }) =>
+  `group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+    isActive ? 'bg-ink-2 text-on-ink' : 'text-ink-muted hover:bg-ink-2/60 hover:text-on-ink'
+  }`
+
+function Marker() {
+  return <span className="absolute inset-y-2 left-0 w-[3px] rounded-full bg-accent opacity-0 transition group-aria-[current=page]:opacity-100" />
+}
+
 /** Laptop and tablet: fixed sidebar on the left. */
 function Sidebar() {
   return (
-    <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r border-line bg-surface px-3 py-5 md:flex">
+    <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col bg-ink px-4 py-6 text-on-ink md:flex">
       <div className="px-2">
         <Brand />
       </div>
 
       <NavLink
         to="/log"
-        className="mt-6 flex items-center justify-center gap-2 rounded-lg bg-accent px-3 py-2.5 text-sm font-semibold text-on-accent transition hover:opacity-90"
+        className="mt-8 flex items-center justify-center gap-2 rounded-full bg-accent px-3 py-2.5 text-sm font-semibold text-on-accent transition hover:brightness-110"
       >
+        <Plus className="size-4" strokeWidth={2.75} />
         Log session
       </NavLink>
 
-      <nav className="mt-6 flex flex-1 flex-col gap-1">
+      <nav className="mt-8 flex flex-1 flex-col gap-1">
         {NAV.filter((n) => !n.primary).map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
             to={to}
             end={to === '/'}
-            className={({ isActive }) =>
-              `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
-                isActive ? 'bg-accent-soft text-accent-strong' : 'text-muted hover:bg-surface-2 hover:text-text'
-              }`
-            }
+            className={sideLink}
           >
+            <Marker />
             <Icon className="size-4.5" />
             {label}
           </NavLink>
@@ -50,12 +58,9 @@ function Sidebar() {
 
       <NavLink
         to="/settings"
-        className={({ isActive }) =>
-          `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
-            isActive ? 'bg-accent-soft text-accent-strong' : 'text-muted hover:bg-surface-2 hover:text-text'
-          }`
-        }
+        className={sideLink}
       >
+        <Marker />
         <SettingsIcon className="size-4.5" />
         Settings
       </NavLink>
@@ -66,9 +71,9 @@ function Sidebar() {
 /** Phone: slim top bar. */
 function TopBar() {
   return (
-    <header className="sticky top-0 z-20 flex items-center justify-between border-b border-line bg-surface/90 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur md:hidden">
+    <header className="sticky top-0 z-20 flex items-center justify-between bg-ink px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] text-on-ink md:hidden">
       <Brand />
-      <NavLink to="/settings" aria-label="Settings" className="grid size-9 place-items-center rounded-lg text-muted hover:bg-surface-2">
+      <NavLink to="/settings" aria-label="Settings" className="grid size-9 place-items-center rounded-lg text-ink-muted hover:bg-ink-2">
         <SettingsIcon className="size-5" />
       </NavLink>
     </header>
@@ -78,11 +83,11 @@ function TopBar() {
 /** Phone: bottom tab bar with the Log button raised in the middle. */
 function TabBar() {
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-5 border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-5 bg-ink pb-[env(safe-area-inset-bottom)] text-on-ink md:hidden">
       {NAV.map(({ to, label, icon: Icon, primary }) =>
         primary ? (
           <NavLink key={to} to={to} aria-label="Log session" className="flex justify-center">
-            <span className="-mt-5 grid size-14 place-items-center rounded-full bg-accent text-on-accent shadow-lg ring-4 ring-bg">
+            <span className="-mt-5 grid size-14 place-items-center rounded-full bg-accent text-on-accent shadow-lg shadow-accent/30 ring-4 ring-ink">
               <Icon className="size-6" strokeWidth={2.5} />
             </span>
           </NavLink>
@@ -92,7 +97,7 @@ function TabBar() {
             to={to}
             end={to === '/'}
             className={({ isActive }) =>
-              `flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium ${isActive ? 'text-accent-strong' : 'text-muted'}`
+              `flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium ${isActive ? 'text-on-ink [&>svg]:text-accent' : 'text-ink-muted'}`
             }
           >
             <Icon className="size-5" />
