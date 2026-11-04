@@ -11,6 +11,11 @@ create table if not exists public.tt_store (
   primary key (user_id, key)
 );
 
+-- Let signed-in people reach the table over the REST API (newer projects don't always grant
+-- this by default). Row level security below still limits each person to their own rows.
+revoke all on public.tt_store from anon;
+grant select, insert, update, delete on public.tt_store to authenticated;
+
 -- Each signed-in person can only see and change their own rows.
 alter table public.tt_store enable row level security;
 
@@ -24,7 +29,7 @@ create policy "own rows: change" on public.tt_store for update to authenticated 
 create policy "own rows: remove" on public.tt_store for delete to authenticated using ((select auth.uid()) = user_id);
 
 -- The revision may only go up by exactly one, so a stale device can't jump over another's write.
-create or replace function public.tt_store_check_rev() returns trigger language plpgsql as $$
+create or replace function public.tt_store_check_rev() returns trigger language plpgsql set search_path = '' as $$
 begin
   if new.rev <> old.rev + 1 then
     raise exception 'tt_store: rev must go from % to %, not %', old.rev, old.rev + 1, new.rev;
@@ -35,3 +40,7 @@ end $$;
 
 drop trigger if exists tt_store_check_rev on public.tt_store;
 create trigger tt_store_check_rev before update on public.tt_store for each row execute function public.tt_store_check_rev();
+
+-- Check: should list tt_store with rowsecurity = true and four policies.
+select tablename, rowsecurity, (select count(*) from pg_policies p where p.tablename = t.tablename) as policies
+from pg_tables t where schemaname = 'public' and tablename = 'tt_store';
