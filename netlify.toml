@@ -1,0 +1,15 @@
+# Netlify: builds the app from this repo. The VITE_* and STRAVA_* values go in
+# Site configuration › Environment variables (see README "Hosting on Netlify").
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[functions]
+  directory = "netlify/functions"
+
+# The app does its own routing (e.g. /plan, /strava/callback): serve index.html for any page
+# that isn't a real file. /api/strava/* is claimed by the function first.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
