@@ -30,6 +30,7 @@ part training tool (plan programmes, reuse sessions, analyse progress) across ev
 8. **Wellbeing vs load** ✅ — which check-in scores move with training load (Analysis)
 9. **Planned sessions → Google Calendar** ✅ — write the plan out to a calendar of its own
 10. **Sync across devices** ✅ — one copy of the data in a database, shared by phone and laptop
+11. **AI coach: research-led plan builder** (proposed) — pre-plan screening, then a researched, cited block that the existing planner schedules around work
 
 ## Session logging decisions (agreed 23 Oct 2026)
 
@@ -160,6 +161,21 @@ rep drift. HR zones live in Settings (max HR, editable zone tops, default 60/70/
 | When | On opening, 3s after any change, on coming back into view (if 30s+ since the last), on going back online, and every 5 min while visible. One tab at a time via Web Locks. Status and errors in Settings › Sync across devices |
 | Backups | Still offered. A restore while signed in replaces the account's copy too (said in the confirm), since the restored data is newer than the base |
 | Not yet | Realtime push from the server (changes arrive on the next sync instead), deleting the account's data from inside the app (delete the rows or the user in Supabase) |
+
+## AI coach: research-led plan builder (proposed 12 Nov 2026, not yet agreed)
+
+| Topic | Proposal |
+|---|---|
+| First job | Build the whole plan. Later jobs (weekly review, chat, session feedback) reuse the same pieces |
+| Screening | A short pre-plan questionnaire, filled from the app's data first so nothing is asked twice: goal race (date, format, distances, priority, target), training history (last 12 weeks of logs and Strava: hours/week per sport, longest sessions, recent PBs, load and form), days and times free (from shifts, events and Plan › Work), injuries and niggles (what, where, how long, what aggravates it, cleared by a physio or not), equipment and access (turbo, pool, gym, open water), experience in the event, and hard limits (most hours a week, days off). Saved as an athlete profile that later plans and reviews reuse |
+| Division of labour | The coach doesn't schedule sessions itself. It decides what the existing planner can't: the block's shape (weeks, cycle, build and deload %, sport mix, sessions and key sessions per sport, easy lengths, most training days, doubles), race-specific sessions (bricks, race-pace run–bike–run, transition practice) written as library workouts or one-offs, and changes to the load heuristics. `src/plan/generate.ts` then places everything around work and events as it does now |
+| Evidence | Two layers. (1) A curated library in the repo: each entry holds the claim, the numbers to use, the population it was tested on, the citation with its DOI, and an evidence grade (meta-analysis, RCT, observational, expert consensus). (2) Live search of papers for anything the library doesn't cover, shown as "found by search, not vetted". Every decision in a proposal names its source; anything without one is labelled the coach's judgement |
+| First disciplines | Duathlon and triathlon (sprint to standard): run–bike–run and swim–bike–run structure, brick sessions, intensity distribution, taper, run-off-the-bike pacing. Rowing, running and strength follow as library entries are added |
+| Injuries | The coach adapts around a niggle (less impact, cross-training, slower run build-up) but never diagnoses. A red-flag answer (sharp or worsening pain, pain at rest, not seen by anyone) shows "see a physio first" and leaves out the affected work until it's cleared |
+| Output | A proposal, never a silent change: the block settings, sessions and heuristic changes, each with a one-line reason and its citation. Accept all, accept some, or ask for changes, then the planner runs. The proposal is kept with the block so the reasoning stays visible later |
+| Engine | Claude through a server function, like the Strava token exchange, so the API key (`ANTHROPIC_API_KEY`) never reaches the browser. Structured output checked against the Block/Workout types before anything is shown. Plan-building runs long (research plus reasoning), so it needs a background or streaming function rather than Netlify's default short timeout; to be settled when building |
+| Data sent | A summary the app computes (weekly totals, load, PBs, check-in averages, shift pattern, screening answers), not the raw log. Said plainly in Settings before first use |
+| Cost | Pay-as-you-go Anthropic API key, separate from any Claude subscription. Estimated well under £1 per plan built, to be measured |
 
 ## Parked for later (noted 23 Oct 2026)
 
