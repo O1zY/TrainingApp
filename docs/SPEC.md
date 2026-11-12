@@ -30,7 +30,10 @@ part training tool (plan programmes, reuse sessions, analyse progress) across ev
 8. **Wellbeing vs load** ✅ — which check-in scores move with training load (Analysis)
 9. **Planned sessions → Google Calendar** ✅ — write the plan out to a calendar of its own
 10. **Sync across devices** ✅ — one copy of the data in a database, shared by phone and laptop
-11. **AI coach: research-led plan builder** (proposed) — pre-plan screening, then a researched, cited block that the existing planner schedules around work
+11. **AI coach: research-led plan builder** (in progress) — pre-plan screening, then a researched, cited block that the existing planner schedules around work
+    - 11a **Screening and athlete profile** ✅
+    - 11b Duathlon/triathlon research library
+    - 11c Coach engine and proposal screen
 
 ## Session logging decisions (agreed 23 Oct 2026)
 
@@ -176,6 +179,17 @@ rep drift. HR zones live in Settings (max HR, editable zone tops, default 60/70/
 | Engine | Claude through a server function, like the Strava token exchange, so the API key (`ANTHROPIC_API_KEY`) never reaches the browser. Structured output checked against the Block/Workout types before anything is shown. Plan-building runs long (research plus reasoning), so it needs a background or streaming function rather than Netlify's default short timeout; to be settled when building |
 | Data sent | A summary the app computes (weekly totals, load, PBs, check-in averages, shift pattern, screening answers), not the raw log. Said plainly in Settings before first use |
 | Cost | Pay-as-you-go Anthropic API key, separate from any Claude subscription. Estimated well under £1 per plan built, to be measured |
+
+## Coach screening decisions (11a, 12 Nov 2026)
+
+| Topic | Decision |
+|---|---|
+| Where | Plan › Coach screening (`/plan/coach`), with a Coach card on Plan showing progress and anything flagged |
+| Storage | `profile` inside `tt-plan-v1`, so sync and backups carry it with no extra wiring. Injuries are a list keyed by `id`, so one added on each device both survive a merge. `src/coach/profile.ts` keeps saved shapes safe |
+| Sections | Goal race (a race from Races & events, format presets that fill the leg distances, aim, target time, experience) · Health check (the PAR-Q+ style questions plus recent illness) · Injuries & niggles · Training history · Time to train (incl. other sport to keep up, e.g. rowing twice a week) · Kit & facilities. Each says what's still missing; the coach needs all six done |
+| From the data | Training history is worked out, not asked: the last 12 whole weeks of the log (hours, days, per-sport sessions, distance and longest, multisport count, fitness/fatigue/form, check-in averages, niggle tags and injury notes). The work pattern comes from the next 4 weeks of shifts, or the last 4 if none are added. Logic `src/coach/history.ts` |
+| Flags | Any health yes → see a GP before intensity. An injury with pain at rest, at night, getting worse, other symptoms or training pain above 5/10 (after the pain-monitoring model, Silbernagel et al. 2007), or painful and not looked at, → see a physio first, and what sets it off is kept out of plans until cleared. Otherwise the coach plans around it. Logic `src/coach/screening.ts` |
+| Not yet | Nothing is sent anywhere: the coach that reads the profile is 11c |
 
 ## Parked for later (noted 23 Oct 2026)
 

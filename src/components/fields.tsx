@@ -207,7 +207,7 @@ export function Toggle({ checked, onChange, label }: { checked: boolean; onChang
 }
 
 /** Collapsible section for the "full detail" parts of a form. */
-export function Section({ title, summary, defaultOpen = false, children }: { title: string; summary?: string; defaultOpen?: boolean; children: ReactNode }) {
+export function Section({ title, summary, defaultOpen = false, children }: { title: ReactNode; summary?: string; defaultOpen?: boolean; children: ReactNode }) {
   const [open, setOpen] = useState(defaultOpen)
   const id = useId()
   return (

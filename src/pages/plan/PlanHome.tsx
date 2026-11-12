@@ -1,7 +1,8 @@
-import { Briefcase, CalendarRange, ChevronLeft, ChevronRight, Flag, Pencil, Plus, RefreshCw } from 'lucide-react'
+import { Briefcase, CalendarRange, ChevronLeft, ChevronRight, ClipboardCheck, Flag, Pencil, Plus, RefreshCw } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Card, EmptyState, PageHeader, StatTile } from '../../components/ui'
+import { allFlags, progress } from '../../coach/screening'
 import { formatDate, todayIso } from '../../log/format'
 import { useLog } from '../../log/LogStore'
 import { KIND_STYLE, WEEK_KINDS, blockWeeks, kindDef, weekLabel, type PlanWeek } from '../../plan/cycle'
@@ -135,6 +136,7 @@ export default function PlanHome() {
       <Card title="Work & calendar" action={<Link to="/plan/work" className="text-sm font-medium text-accent-strong">Manage</Link>}>
         <WorkSummary />
       </Card>
+      <CoachCard />
     </>
   )
 
@@ -272,6 +274,35 @@ export default function PlanHome() {
         </div>
       </div>
     </>
+  )
+}
+
+/** Progress through the coach screening, the first step towards a coach-built plan. */
+function CoachCard() {
+  const { profile, events } = usePlan()
+  const today = todayIso()
+  const p = profile ? progress(profile, events, today) : undefined
+  const stops = profile ? allFlags(profile).filter((f) => f.level === 'stop').length : 0
+  return (
+    <Card title="Coach" action={<Link to="/plan/coach" className="text-sm font-medium text-accent-strong">{p ? 'Open' : 'Start'}</Link>}>
+      <Link to="/plan/coach" className="flex items-center gap-3">
+        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent-strong">
+          <ClipboardCheck className="size-5" />
+        </span>
+        <span className="min-w-0 text-sm">
+          <span className="block font-semibold">Screening {p ? `${p.done} of ${p.total} done` : 'not started'}</span>
+          <span className="block text-muted">
+            {!p
+              ? 'Goal race, health, injuries, history and time to train: what the coach needs before building a plan.'
+              : stops
+                ? `${stops} thing${stops === 1 ? '' : 's'} to check with a professional first.`
+                : p.complete
+                  ? 'Ready. The coach-built plan comes next.'
+                  : 'Finish it so the coach can build your plan.'}
+          </span>
+        </span>
+      </Link>
+    </Card>
   )
 }
 
