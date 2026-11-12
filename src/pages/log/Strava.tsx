@@ -43,6 +43,8 @@ function resultLine(r: SyncResult) {
 }
 
 function SetupHelp() {
+  const local = ['localhost', '127.0.0.1'].includes(location.hostname)
+  const code = (t: string) => <code className="rounded bg-surface-2 px-1">{t}</code>
   return (
     <div className="space-y-2 text-sm text-muted">
       <p>Strava import needs a Strava API app and this site’s server to hold its secret.</p>
@@ -52,13 +54,26 @@ function SetupHelp() {
           <a href="https://www.strava.com/settings/api" target="_blank" rel="noreferrer" className="font-medium text-accent-strong underline">
             strava.com/settings/api
           </a>{' '}
-          with <span className="font-medium text-text">Authorization Callback Domain</span> set to <code className="rounded bg-surface-2 px-1">{location.hostname}</code>.
+          with <span className="font-medium text-text">Authorization Callback Domain</span> set to {code(location.hostname)}.
         </li>
-        <li>
-          Put its Client ID and Client Secret in <code className="rounded bg-surface-2 px-1">.env.local</code> as <code className="rounded bg-surface-2 px-1">STRAVA_CLIENT_ID</code> and{' '}
-          <code className="rounded bg-surface-2 px-1">STRAVA_CLIENT_SECRET</code> (see <code className="rounded bg-surface-2 px-1">.env.example</code>).
-        </li>
-        <li>Restart the dev server.</li>
+        {local ? (
+          <>
+            <li>
+              Put its Client ID and Client Secret in {code('.env.local')} as {code('STRAVA_CLIENT_ID')} and {code('STRAVA_CLIENT_SECRET')} (see {code('.env.example')}).
+            </li>
+            <li>Restart the dev server.</li>
+          </>
+        ) : (
+          <>
+            <li>
+              In Netlify, <span className="font-medium text-text">Site configuration › Environment variables</span>, add its Client ID and Client Secret as {code('STRAVA_CLIENT_ID')} and{' '}
+              {code('STRAVA_CLIENT_SECRET')}.
+            </li>
+            <li>
+              Redeploy (<span className="font-medium text-text">Deploys › Trigger deploy</span>), then reload this page.
+            </li>
+          </>
+        )}
       </ol>
     </div>
   )
