@@ -1,4 +1,4 @@
-import { Activity, Plus, Settings as SettingsIcon } from 'lucide-react'
+import { Plus, Settings as SettingsIcon } from 'lucide-react'
 import { Suspense } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { ErrorBoundary } from '../components/ErrorBoundary'
@@ -10,9 +10,7 @@ const APP_NAME = 'Training Tracker'
 function Brand() {
   return (
     <div className="font-display flex items-center gap-2.5 text-[17px] font-bold tracking-tight">
-      <span className="grid size-8 place-items-center rounded-[10px] bg-accent text-on-accent">
-        <Activity className="size-4.5" strokeWidth={2.5} />
-      </span>
+      <img src="/favicon.svg" alt="" className="size-8 rounded-[10px] ring-1 ring-white/10" />
       {APP_NAME}
     </div>
   )
