@@ -1,4 +1,4 @@
-import { ArrowLeft, BookOpen, Check, Plus } from 'lucide-react'
+import { ArrowLeft, BookOpen, Check, Plus, Sparkles } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Field, FieldGroup, MultiChips, NumberInput, Section, TextArea, TimeInput, Toggle, inputClass } from '../../../components/fields'
@@ -121,7 +121,14 @@ export default function Screening() {
             <div className="font-semibold">
               {prog.done} of {prog.total} sections done
             </div>
-            <p className="text-sm text-muted">{prog.complete ? 'Ready for the coach.' : 'The coach can build a plan once every section is done.'}</p>
+            <p className="text-sm text-muted">
+              {!prog.complete ? 'The coach can build a plan once every section is done.' : dirty ? 'Ready: save, then build your plan.' : 'Ready for the coach.'}
+            </p>
+            {prog.complete && !dirty && (
+              <Link to="/plan/coach/plan" className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-on-accent hover:opacity-90">
+                <Sparkles className="size-4" /> Build my plan
+              </Link>
+            )}
           </div>
           <div className="flex gap-1" aria-hidden>
             {SECTIONS.map((s) => (

@@ -34,6 +34,7 @@ part training tool (plan programmes, reuse sessions, analyse progress) across ev
     - 11a **Screening and athlete profile** ✅
     - 11b **Duathlon/triathlon research library** ✅
     - 11c Coach engine and proposal screen (parked 24 Nov 2026: needs a paid Anthropic API key)
+    - 11d **Rule-based coach** ✅ (no AI, no running cost): builds the block from the screening and the research library
 
 ## Session logging decisions (agreed 23 Oct 2026)
 
@@ -202,6 +203,24 @@ rep drift. HR zones live in Settings (max HR, editable zone tops, default 60/70/
 | Strength rules (tested) | Strong needs a meta-analysis or systematic review among its sources; moderate needs a trial or review; every source is cited and every citation exists |
 | Relevance | From the screening: duathlon or triathlon, running, an injury, lifting or gym access, HRV in recent check-ins, work shifts, an A race. Each relevant finding says why it applies |
 | Gaps | Swimming technique and open-water skills, heat, nutrition, rowing, running and strength as main goals: to be added, or answered by live paper search in 11c (marked not vetted) |
+
+## Rule-based coach decisions (11d, 24 Nov 2026)
+
+| Topic | Decision |
+|---|---|
+| Why | 11c (Claude) parked to avoid API costs. The same job done by fixed, tested rules: `src/coach/rules.ts` turns the profile, the goal race, training history and work pattern into a block for the existing planner, which still places every session around shifts and events |
+| Where | Plan › Coach › Build my plan (`/plan/coach/plan`), from the screening once it's saved and complete, or the Coach card on Plan. Shows the block (weeks, volume, sessions per sport), the bricks it adds, and every choice with its research findings (linked to Research) or marked "Coach's judgement". Nothing is saved until "Create this block"; an overlapping block can be replaced (logged sessions stay) |
+| Length | From next week to the race week, plus a recovery week for an A race. Over 20 weeks away: a 12-week base block, with a note to run the coach again later. Under 3 weeks: a warning |
+| Rhythm | 3:1, or 2:1 when newer to training (under 2 years), carrying a niggle, or recently ill (judgement). Build weeks +8% (+5% in those cases or with no running logged); deloads at 60% |
+| Volume | Starts from recent training (×1.05), never cutting the race sports below what's already done to fit new strength or kept sessions; 60% of the limit with nothing logged. Grows each cycle (new `cycleGrowthPct` block setting, up to 10%, 5% with a niggle, illness or under 2 years) as far as the biggest real week stays inside the hours limit |
+| Sports | Duathlon run 40 / bike 60; triathlon swim 20 / bike 50 / run 30. Running first keeps its current time (up to half the week) and other sports share the rest, so extra volume lands on the bike. Sports blocked by an injury flagged "see a physio" are left out (cross-training instead). Kept sports (e.g. rowing) all easy. Strength twice a week with gym access (once under 4h a week), one heavy |
+| Sessions | Counts suit a mid-block week, with easy sessions no shorter than run 25′, bike 40′, swim 25′ there; lengths are set for week 1 and grow with volume. A long session only when it's at least 45′ run / 60′ bike from week 1 and fits a day off |
+| Hard sessions | 2 a week across all sports under 6h, otherwise 3, ordered bike (brick), run, then run (duathlon) or swim (triathlon); none after a health "yes"; no running speed work with a hills/speed-aggravated niggle |
+| Bricks | Three library workouts (tagged `brick`, `coach`), set as the block's benchmarks so the hard bike session of build weeks 1–3 is a brick, repeated each cycle: 45′ bike + 10′ run; 3 × (10′ bike + 5′ run); a race simulation sized from the goal legs. Re-running reuses them rather than adding copies |
+| Taper | Sprint/super sprint or a race under 3 weeks away: the planner's one-week taper. Longer A races: two weeks (the extra week set as a taper by hand). B races: a lighter race week |
+| Stored | The decisions and warnings are kept on the block (`coach`) and shown on Plan as "Why this plan" |
+| Planner change | `useReplan` takes new workouts directly, so a block can be planned with bricks saved in the same moment |
+| Not yet | Automatic HRV-based swaps (stated as a by-hand rule); a long session that switches on later in the block; per-sport progression |
 
 ## Parked for later (noted 23 Oct 2026)
 

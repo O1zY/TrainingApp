@@ -1,4 +1,7 @@
 import { AlertTriangle, Info, Trash2 } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { FINDINGS } from '../../../coach/evidence'
+import type { CoachNote } from '../../../plan/types'
 import type { ReactNode } from 'react'
 import { Field, FieldGroup, MultiChips, Scale, TextArea, TextInput, Toggle, inputClass } from '../../../components/fields'
 import { chip } from '../../../components/styles'
@@ -261,3 +264,33 @@ export function WorkSummary({ w }: { w: WorkPattern }) {
     </div>
   )
 }
+
+const findingTitle = new Map(FINDINGS.map((f) => [f.id, f.title]))
+
+/** One coach decision with links to the research behind it (coach plan page, and Plan for a coach-built block). */
+export function NoteRow({ note }: { note: CoachNote }) {
+  return (
+    <li className="py-3 first:pt-0 last:pb-0">
+      <div className="text-xs font-semibold uppercase tracking-wide text-muted">{note.area}</div>
+      <p className="mt-0.5 text-sm">{note.text}</p>
+      <div className="mt-1.5 flex flex-wrap gap-1.5">
+        {note.findings.map((id) => (
+          <Link key={id} to={`/plan/coach/research#${id}`} className="rounded-full bg-accent-soft px-2.5 py-1 text-xs font-medium text-accent-strong hover:underline">
+            {findingTitle.get(id) ?? id}
+          </Link>
+        ))}
+        {note.judgement && <span className="rounded-full border border-line px-2.5 py-1 text-xs text-muted">Coach’s judgement</span>}
+      </div>
+    </li>
+  )
+}
+
+export function Warning({ text }: { text: string }) {
+  return (
+    <p className="flex gap-2 rounded-xl bg-miss/10 px-3 py-2.5 text-sm">
+      <AlertTriangle className="mt-0.5 size-4 shrink-0 text-miss" aria-hidden />
+      <span>{text}</span>
+    </p>
+  )
+}
+

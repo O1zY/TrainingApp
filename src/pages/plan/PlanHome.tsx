@@ -1,4 +1,4 @@
-import { Briefcase, CalendarRange, ChevronLeft, ChevronRight, ClipboardCheck, Flag, Pencil, Plus, RefreshCw } from 'lucide-react'
+import { Briefcase, CalendarRange, ChevronLeft, ChevronRight, ClipboardCheck, Flag, Pencil, Plus, RefreshCw, Sparkles } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Card, EmptyState, PageHeader, StatTile } from '../../components/ui'
@@ -11,9 +11,10 @@ import { covers, raceLabel } from '../../plan/events'
 import { dayLoad, weekWork } from '../../plan/load'
 import { blockEnd, loggedFor, useReplan } from '../../plan/planned'
 import { usePlan } from '../../plan/PlanStore'
-import type { Block, WeekKind } from '../../plan/types'
+import type { Block, CoachNotes, WeekKind } from '../../plan/types'
 import { useSettings } from '../../settings/SettingsContext'
 import { DayRow, KindPill, type DayInfo } from './bits'
+import { NoteRow, Warning } from './coach/parts'
 
 /** The block as a row of bars: height is planned volume, colour is the week's phase. */
 function BlockWave({ weeks, selected, onPick }: { weeks: PlanWeek[]; selected: string; onPick: (start: string) => void }) {
@@ -137,6 +138,7 @@ export default function PlanHome() {
         <WorkSummary />
       </Card>
       <CoachCard />
+      {block?.coach && <CoachNotesCard notes={block.coach} />}
     </>
   )
 
@@ -277,6 +279,31 @@ export default function PlanHome() {
   )
 }
 
+/** Why the coach built this block the way it did, folded away until wanted. */
+function CoachNotesCard({ notes }: { notes: CoachNotes }) {
+  return (
+    <Card title="Why this plan">
+      {notes.warnings.length > 0 && (
+        <div className="mb-3 space-y-2">
+          {notes.warnings.map((w) => (
+            <Warning key={w} text={w} />
+          ))}
+        </div>
+      )}
+      <details>
+        <summary className="cursor-pointer text-sm font-medium text-accent-strong">
+          {notes.notes.length} choices from the coach, {formatDate(notes.at.slice(0, 10))}
+        </summary>
+        <ul className="mt-3 divide-y divide-line">
+          {notes.notes.map((n) => (
+            <NoteRow key={n.area + n.text} note={n} />
+          ))}
+        </ul>
+      </details>
+    </Card>
+  )
+}
+
 /** Progress through the coach screening, the first step towards a coach-built plan. */
 function CoachCard() {
   const { profile, events } = usePlan()
@@ -309,11 +336,16 @@ function CoachCard() {
               : stops
                 ? `${stops} thing${stops === 1 ? '' : 's'} to check with a professional first.`
                 : p.complete
-                  ? 'Ready. The coach-built plan comes next.'
+                  ? 'Ready: the coach can build your plan.'
                   : 'Finish it so the coach can build your plan.'}
           </span>
         </span>
       </Link>
+      {p?.complete && (
+        <Link to="/plan/coach/plan" className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-on-accent hover:opacity-90">
+          <Sparkles className="size-4" /> Build my plan
+        </Link>
+      )}
     </Card>
   )
 }

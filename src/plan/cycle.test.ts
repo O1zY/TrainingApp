@@ -40,4 +40,20 @@ describe('blockWeeks', () => {
     expect(weeks[1].overridden).toBe(true)
     expect(weeks[2].buildNo).toBe(1)
   })
+
+  it('grows each cycle by the cycle growth %, leaving blocks without it unchanged', () => {
+    const flat = blockWeeks(block, [])
+    const grown = blockWeeks({ ...block, cycleGrowthPct: 10 }, [])
+    expect(flat[4].volume).toBe(1)
+    expect(grown.slice(0, 4).map((w) => w.volume)).toEqual(flat.slice(0, 4).map((w) => w.volume))
+    expect(grown[4].volume).toBeCloseTo(1.1)
+    expect(grown[6].volume).toBeCloseTo(1.16 * 1.1)
+    expect(grown[7].volume).toBeCloseTo(0.6 * 1.1)
+  })
+
+  it('tapers from the biggest grown week', () => {
+    const weeks = blockWeeks({ ...block, weeks: 10, cycleGrowthPct: 10 }, [race('2026-12-30', 'A')])
+    const taper = weeks.find((w) => w.kind === 'taper')!
+    expect(taper.volume).toBeCloseTo(0.7 * 1.16 * 1.1)
+  })
 })

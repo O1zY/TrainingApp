@@ -1,6 +1,6 @@
 import { ArrowLeft, BookOpen, ExternalLink } from 'lucide-react'
-import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import { PageHeader, Segmented } from '../../../components/ui'
 import { FINDINGS, STRENGTH_LABEL, coachContext, doiUrl, pubmedUrl, relevantFindings, shortCite, sourcesFor, type Finding, type Strength } from '../../../coach/evidence'
 import { addDays } from '../../../plan/dates'
@@ -20,7 +20,7 @@ const STRENGTH_STYLE: Record<Strength, string> = {
 function FindingCard({ finding, reasons }: { finding: Finding; reasons?: string[] }) {
   const sources = sourcesFor(finding)
   return (
-    <article className="rounded-[20px] border border-line/70 bg-surface p-4 md:p-5">
+    <article id={finding.id} className="scroll-mt-6 rounded-[20px] border border-line/70 bg-surface p-4 target:ring-2 target:ring-accent md:p-5">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <h2 className="text-base font-semibold tracking-tight">{finding.title}</h2>
         <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${STRENGTH_STYLE[finding.strength]}`}>{STRENGTH_LABEL[finding.strength]}</span>
@@ -82,8 +82,13 @@ function FindingCard({ finding, reasons }: { finding: Finding; reasons?: string[
 export default function Research() {
   const { profile, events, commitments } = usePlan()
   const { wellbeing } = useLog()
-  const [view, setView] = useState<'mine' | 'all'>('mine')
+  const { hash } = useLocation()
+  // Linked to one finding (from a coach decision): show everything so it's there, and go to it.
+  const [view, setView] = useState<'mine' | 'all'>(hash ? 'all' : 'mine')
   const today = todayIso()
+  useEffect(() => {
+    if (hash) document.getElementById(decodeURIComponent(hash.slice(1)))?.scrollIntoView()
+  }, [hash])
 
   const relevant = useMemo(() => {
     const from = addDays(today, -27)

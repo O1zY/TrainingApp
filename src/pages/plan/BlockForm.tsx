@@ -151,12 +151,15 @@ function Form({ initial, editing }: { initial: BlockDraft; editing: boolean }) {
               ]}
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <Field label="Volume added each build week" unit="%">
               <NumberInput integer value={draft.progressionPct} onChange={(v) => patch({ progressionPct: Math.min(25, v ?? 0) })} />
             </Field>
             <Field label="Deload volume" unit="% of build 1">
               <NumberInput integer value={draft.deloadPct} onChange={(v) => patch({ deloadPct: Math.min(100, v ?? 60) })} />
+            </Field>
+            <Field label="Volume added each cycle" unit="%">
+              <NumberInput integer value={draft.cycleGrowthPct ?? 0} onChange={(v) => patch({ cycleGrowthPct: Math.min(20, v ?? 0) || undefined })} />
             </Field>
           </div>
           <div>

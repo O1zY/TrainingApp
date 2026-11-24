@@ -33,7 +33,7 @@ export const blockEnd = (b: Pick<Block, 'start' | 'weeks'>) => addDays(b.start, 
 export function useReplan() {
   const plan = usePlan()
   const { workouts, sessions } = useLog()
-  return (fresh: { blocks?: Block[]; events?: PlanEvent[]; commitments?: Commitment[]; prefs?: PlanPrefs } = {}) => {
+  return (fresh: { blocks?: Block[]; events?: PlanEvent[]; commitments?: Commitment[]; prefs?: PlanPrefs; workouts?: Workout[] } = {}) => {
     const today = todayIso()
     const logged = new Set(sessions.map((s) => s.planId).filter(Boolean))
     const keep = (p: PlannedSession) => p.date < today || !!p.locked || logged.has(p.id)
@@ -48,7 +48,7 @@ export function useReplan() {
         events: fresh.events ?? plan.events,
         commitments: fresh.commitments ?? plan.commitments,
         prefs: fresh.prefs ?? plan.prefs,
-        workouts,
+        workouts: fresh.workouts ?? workouts,
         fixed,
         from,
       })

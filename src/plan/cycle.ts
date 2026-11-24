@@ -53,7 +53,7 @@ export function weekLabel(w: Pick<PlanWeek, 'kind' | 'buildNo'>) {
  * - A deload due the week before a taper is skipped, as the taper does its job.
  * Weeks set by hand always win and the rhythm counts on from them.
  */
-export function blockWeeks(block: Pick<Block, 'start' | 'weeks' | 'buildWeeks' | 'progressionPct' | 'deloadPct' | 'weekKinds'>, events: PlanEvent[]): PlanWeek[] {
+export function blockWeeks(block: Pick<Block, 'start' | 'weeks' | 'buildWeeks' | 'progressionPct' | 'deloadPct' | 'cycleGrowthPct' | 'weekKinds'>, events: PlanEvent[]): PlanWeek[] {
   const end = addDays(block.start, block.weeks * 7 - 1)
   const weeks: PlanWeek[] = Array.from({ length: block.weeks }, (_, i) => {
     const start = addDays(block.start, i * 7)
@@ -122,19 +122,29 @@ export function blockWeeks(block: Pick<Block, 'start' | 'weeks' | 'buildWeeks' |
   })
 
   const step = block.progressionPct / 100
-  const peak = Math.max(1, ...weeks.filter((w) => w.kind === 'build').map((w) => 1 + step * (w.buildNo! - 1)))
-  for (const w of weeks) {
+  // Each deload or recovery week closes a cycle; the next cycle starts that much bigger.
+  const grow = 1 + (block.cycleGrowthPct ?? 0) / 100
+  let cycle = 0
+  const cycleFactor = weeks.map((w) => {
+    const f = grow ** cycle
+    if (w.kind === 'deload' || w.kind === 'recovery') cycle++
+    return f
+  })
+  const buildVolume = (w: PlanWeek, i: number) => (1 + step * (w.buildNo! - 1)) * cycleFactor[i]
+  const peak = Math.max(1, ...weeks.map((w, i) => (w.kind === 'build' ? buildVolume(w, i) : 0)))
+  weeks.forEach((w, i) => {
     const aRace = w.races.some((r) => r.priority === 'A')
+    const f = cycleFactor[i]
     w.volume =
       w.kind === 'build'
-        ? 1 + step * (w.buildNo! - 1)
+        ? buildVolume(w, i)
         : w.kind === 'deload'
-          ? block.deloadPct / 100
+          ? (block.deloadPct / 100) * f
           : w.kind === 'taper'
             ? 0.7 * peak
             : w.kind === 'race'
-              ? aRace ? 0.5 : 0.8
-              : 0.5
-  }
+              ? (aRace ? 0.5 : 0.8) * f
+              : 0.5 * f
+  })
   return weeks
 }
