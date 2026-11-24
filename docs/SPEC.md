@@ -196,7 +196,7 @@ rep drift. HR zones live in Settings (max HR, editable zone tops, default 60/70/
 | Topic | Decision |
 |---|---|
 | Where | `src/coach/evidence/`: `sources.ts` (the studies), `findings.ts` (what the coach may plan from), `index.ts` (look-ups and relevance). Browsable on Plan › Coach › Research (`/plan/coach/research`), "For you" or all |
-| Sources | 33 papers, each found in the paper index (PubMed/PMC) and its authors, year, journal, DOI and PubMed id checked, with the finding restated from its abstract (publisher or PubMed page). Volume/pages only where seen. Nothing added from memory alone |
+| Sources | 35 papers, each found in the paper index (PubMed/PMC) and its authors, year, journal, DOI and PubMed id checked, with the finding restated from its abstract (publisher or PubMed page). Volume/pages only where seen. Nothing added from memory alone |
 | Findings | 17, each with a plain summary, guidance with numbers, caveats, an evidence strength and which part of the plan it shapes. Where a number is coaching convention rather than a study result (sets and reps, brick length, the 10% run rule), the caveat says so. Counter-evidence is kept in (e.g. threshold training matching polarised in recreational runners; block periodisation's conflicting trials) |
 | Topics | Intensity mix, long intervals, taper, bricks, bike pacing, cadence, first km off the bike, duathlon pacing, heavy strength, lifting order, run progression, the acute:chronic ratio (information only), pain monitoring, sleep, HRV-guided days, block periodisation, planning around work |
 | Strength rules (tested) | Strong needs a meta-analysis or systematic review among its sources; moderate needs a trial or review; every source is cited and every citation exists |
