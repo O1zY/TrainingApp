@@ -65,6 +65,11 @@ describe('coachPlan for a duathlete', () => {
     expect(weeks.at(-3)!.kind).toBe('taper')
   })
 
+  it('describes the aim in words, not the stored code', () => {
+    expect(p.block.goal).toBe('Aim: Qualify')
+    expect(ok(run({ profile: profile({ goal: { ...profile().goal, aim: 'pb', aimNotes: 'sub-1:10' } }) })).block.goal).toBe('Aim: Personal best · sub-1:10')
+  })
+
   it('keeps a sprint taper to one week', () => {
     expect(p.block.weekKinds).toBeUndefined()
   })

@@ -9,6 +9,13 @@ export type RaceFormat = 'supersprint' | 'sprint' | 'standard' | 'middle' | 'lon
 
 export type RaceAim = 'finish' | 'pb' | 'qualify' | 'place'
 
+export const RACE_AIMS: { value: RaceAim; label: string }[] = [
+  { value: 'finish', label: 'Finish strong' },
+  { value: 'pb', label: 'Personal best' },
+  { value: 'qualify', label: 'Qualify' },
+  { value: 'place', label: 'Place / podium' },
+]
+
 export type Experience = 'first' | 'some' | 'experienced'
 
 /** One leg of the goal race, in race order. */
