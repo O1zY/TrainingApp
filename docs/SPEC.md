@@ -35,6 +35,8 @@ part training tool (plan programmes, reuse sessions, analyse progress) across ev
     - 11b **Duathlon/triathlon research library** ✅
     - 11c Coach engine and proposal screen (parked 24 Nov 2026: needs a paid Anthropic API key)
     - 11d **Rule-based coach** ✅ (no AI, no running cost): builds the block from the screening and the research library
+12. **Fitness markers and zones** (proposed 24 Nov 2026, not yet agreed) — threshold numbers per sport, kept with their history, that turn "zone 4" into a real pace or wattage on every planned session
+13. **Weekly review and adapting the plan** (proposed 24 Nov 2026, not yet agreed) — a Sunday look back that proposes changes to the weeks ahead, plus a morning check that can swap a hard day for an easy one. Built after 12, so its rules can talk about targets
 
 ## Session logging decisions (agreed 23 Oct 2026)
 
@@ -221,6 +223,45 @@ rep drift. HR zones live in Settings (max HR, editable zone tops, default 60/70/
 | Stored | The decisions and warnings are kept on the block (`coach`) and shown on Plan as "Why this plan" |
 | Planner change | `useReplan` takes new workouts directly, so a block can be planned with bricks saved in the same moment |
 | Not yet | Automatic HRV-based swaps (stated as a by-hand rule); a long session that switches on later in the block; per-sport progression |
+
+## Fitness markers and zones (12, proposed 24 Nov 2026, not yet agreed)
+
+| Topic | Proposal |
+|---|---|
+| Why | Planned sessions only say "zone 4" or an RPE, because pace and watts depend on the athlete (`src/plan/oneOffs.ts`). With a threshold number per sport, every session gets a real target ("4 × 8′ at 3:55–4:00/km") and the trend of those numbers is the plainest sign the training is working |
+| Markers | Run threshold pace · bike FTP (watts) · erg 2k time · swim CSS (critical swim speed) · max HR and resting HR (moving here from Settings, which keeps reading them). Stored in base units as now: pace in s/km for every sport, shown /km, /500m or /100m |
+| Storage | `markers` list in `tt-log-v1`, one record per value with `id`, `kind`, `value`, `date`, `source` (`test`, `race`, `estimate`, `manual`) and the session it came from. A history, not one value per kind (unlike 1RMs), so it can be charted; the current marker is the latest. Keyed by `id`, so sync and backups carry it with no extra wiring |
+| Where they come from | Entered by hand, or suggested from the log, always confirmed before saving: a session typed `test` or a library workout tagged `test` (30′ run test: average pace of the last 20′; 20′ bike test: 95% of average watts; 2k erg: the time; 400m + 200m swim: CSS = 200 m ÷ (t400 − t200)), and race results and Strava best efforts as estimates. These formulas are coaching convention; each is labelled so on screen, and goes into the research library only once a source is found and checked, as the library's rules require |
+| Zones | Five zones per sport, matching the existing five HR zones so "zone n" means one thing everywhere: run pace as % of threshold speed, bike power as % of FTP (Coggan's levels folded into five), erg as seconds added to the 2k split (UT2 / UT1 / AT / TR / AN), swim as seconds per 100m either side of CSS. Exact cut-offs to be taken from their sources when building, not from memory. Shown and editable in Settings › Zones |
+| Targets | A rep or session aimed at `hrZone` n also gets the pace or power range of zone n for its sport once that marker exists, so the planner's one-offs and existing library workouts gain real numbers with no rewriting. Library workouts can also aim at a % of a marker (e.g. 105% FTP, 2k split +4s). Logging a session saves the resolved numbers on it (as `oneRmKg` does for lifts), so old sessions are judged against what was asked at the time |
+| Out of date | A marker over 8 weeks old shows its targets as "estimate, re-test". No marker: targets stay as HR zone and RPE, as now |
+| Re-testing | Each marker suggests a re-test every 6 weeks (a setting). Blocks gain an option to place tests on the last day of each deload week (fresh, and once per cycle), replacing that sport's key session; the rule-based coach turns it on for the race sports |
+| Seeing it | Analysis › Fitness markers: each marker over time with tests marked, and the change since the block started. Home shows current markers and any that are due a re-test |
+| Logic | `src/markers/` (estimates from sessions, zone tables, resolving targets), tested like the rest |
+| Not yet | Separate HR zones per sport from lactate-threshold HR; race-time predictions from markers (the next proposal after 13) |
+
+## Weekly review and adapting the plan (13, proposed 24 Nov 2026, not yet agreed)
+
+| Topic | Proposal |
+|---|---|
+| Why | The plan is built once and then carries on whatever happens. The review closes the loop: it compares the week with the plan and the check-ins, and proposes changes for the weeks ahead the same way the coach does, never silently |
+| When | From the evening of the week's last day (from the week-start setting), a "Review your week" card on Home and Plan, until done or skipped. Any past week can be reviewed from Plan. Pending Strava imports are offered first so the week is complete |
+| What it shows | Planned vs done per session (done, moved, skipped, missed); key sessions and benchmarks hit or missed, with target results from `summariseTargets`; hours and load against the plan; fitness, fatigue and form; check-in averages against the athlete's own last 4 weeks; sleep; niggles and illness noted. The acute:chronic ratio is shown as information only (finding `no-acwr-rules`) |
+| What it asks | How the week felt (1–5); any new niggle or one getting worse, with a pain score (0–10) that's added to the screening's injury list so its flags apply; anything coming up (away or busy, added to Races & events); an optional note |
+| Rules | Each one gives a proposal with its reason and its findings, or "Coach's judgement": |
+| · Missed key session | Not made up by stacking it into the next week. A missed benchmark or brick moves to the next build week's slot for that sport (judgement) |
+| · Low completion | Under 60% of planned time, or half the key sessions missed: next week repeats this week's volume rather than building. Two such weeks in a row: suggest re-running the coach for a shorter block (judgement; `run-progression`) |
+| · Struggling | 3+ days of the week below the athlete's own normal on sleep, fatigue, soreness or energy, and easy sessions logged at a higher RPE than planned: bring the deload forward a week, or cut next week by 20% (judgement; `sleep`) |
+| · Ill | Illness ticked in a check-in: next week easy only, building back from the following week (judgement) |
+| · Niggle | Pain above 5/10 during training, not settled by the next morning, or higher than last week: less of whatever sets it off next week. A red-flag answer (as in the screening) leaves the sport out until cleared, "see a physio first" (`pain-monitoring`) |
+| · Targets too easy | Most key reps "harder than target" at a lower RPE than planned: suggest a re-test, not more volume (links to 12) |
+| · Targets too hard | Two key sessions in a row mostly missed: suggest a re-test or an easier week before anything else |
+| · Big work week | Next week's shifts heavier than usual (`src/plan/load.ts`): lighten training that week (`plan-around-work`) |
+| Morning check | After the morning check-in, if today has a key session: sleep under 6h or sleep quality 1–2, or HRV clearly below its 7-day baseline with 7+ days of readings, proposes swapping it for an easy session and moving the key one to a later free day in the same week if one fits (`sleep`, `hrv-guided`). Shown on Home as one tap: swap or keep. The HRV threshold to follow the method of the trials in that finding, checked when building |
+| Applying | Accept all, some or none. Session changes edit the planned sessions (locked, so re-planning leaves them alone); volume changes go in a new `weekScale` on the block (% per week start, beside `weekKinds`), then `useReplan` re-plans the unlocked future weeks around work and events as now |
+| Stored | `reviews` in `tt-plan-v1`, one per week start (keyed by `id`): the answers, a snapshot of the numbers shown, the proposals and which were accepted. Shown as a short line on each past week in Plan, so the reasoning stays visible |
+| Logic | `src/review/` (week summary, baselines, rules), pure and tested with made-up weeks for each rule |
+| Not yet | Push notifications (the card waits on Home); rules that learn their thresholds from the athlete's own history (the parked "adaptive coaching", which this is the first step towards) |
 
 ## Parked for later (noted 23 Oct 2026)
 
