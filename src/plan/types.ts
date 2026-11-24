@@ -64,6 +64,11 @@ export interface Block {
   doubles: boolean
   /** JS weekday (0 = Sunday) kept free when possible. */
   restDay?: number
+  /**
+   * Sports tested in turn, one per deload week, so each fitness marker stays current.
+   * Missing: the block's main sport every time.
+   */
+  testSports?: Sport[]
   /** Library workouts repeated once per cycle, in the same build week, so attempts compare. */
   benchmarks: string[]
   /** 0–100: share of the other sessions taken from the library rather than one-offs. */

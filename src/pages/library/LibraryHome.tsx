@@ -9,6 +9,7 @@ import { useLog } from '../../log/LogStore'
 import { LOGGABLE, SPORTS } from '../../log/sports'
 import type { Sport, Workout } from '../../log/types'
 import { useSettings } from '../../settings/SettingsContext'
+import { useZoneContext } from '../../markers/useZones'
 
 function chip(on: boolean) {
   return `shrink-0 rounded-full border px-3 py-1.5 text-sm font-medium transition ${
@@ -18,6 +19,7 @@ function chip(on: boolean) {
 
 function WorkoutCard({ w }: { w: Workout }) {
   const { settings } = useSettings()
+  const zones = useZoneContext()
   const { sessions } = useLog()
   const def = SPORTS[w.sport]
   const logged = sessions.filter((s) => s.workoutId === w.id)
@@ -33,7 +35,7 @@ function WorkoutCard({ w }: { w: Workout }) {
         <span className="min-w-0 flex-1">
           <span className="block truncate font-semibold">{w.name}</span>
           <span className="block text-xs text-muted">{[def.label, type].filter(Boolean).join(' · ')}</span>
-          <span className="tabular mt-2 block text-sm">{structureSummary(w, settings.units) || <span className="text-muted">No structure yet</span>}</span>
+          <span className="tabular mt-2 block text-sm">{structureSummary(w, settings.units, zones) || <span className="text-muted">No structure yet</span>}</span>
         </span>
       </Link>
       {w.tags.length > 0 && (

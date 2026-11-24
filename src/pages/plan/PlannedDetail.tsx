@@ -19,6 +19,7 @@ import { useSettings } from '../../settings/SettingsContext'
 import { Exercises, History, Structure } from '../library/WorkoutDetail'
 import { SportPicker } from '../log/SessionForm'
 import { IntensityPill } from './bits'
+import { useZoneContext } from '../../markers/useZones'
 
 const INTENSITIES = (['easy', 'moderate', 'key'] as Intensity[]).map((value) => ({ value, label: INTENSITY_LABEL[value] }))
 
@@ -54,6 +55,7 @@ function SourceCard({ p }: { p: PlannedSession }) {
   const { workouts, saveWorkout } = useLog()
   const { savePlanned } = usePlan()
   const { settings } = useSettings()
+  const zones = useZoneContext()
   const navigate = useNavigate()
   const options = workouts.filter((w) => w.sport === p.sport && w.id !== p.workoutId).sort((a, b) => a.name.localeCompare(b.name))
   const lib = p.workoutId ? workouts.find((w) => w.id === p.workoutId) : undefined
@@ -91,7 +93,7 @@ function SourceCard({ p }: { p: PlannedSession }) {
             <option value="">Choose…</option>
             {options.map((w) => (
               <option key={w.id} value={w.id}>
-                {w.name} · {structureSummary(w, settings.units)}
+                {w.name} · {structureSummary(w, settings.units, zones)}
               </option>
             ))}
           </select>
@@ -106,6 +108,7 @@ export default function PlannedDetail() {
   const { planned, events, savePlanned, deletePlanned } = usePlan()
   const { workouts, sessions } = useLog()
   const { settings } = useSettings()
+  const zones = useZoneContext()
   const navigate = useNavigate()
   const p = planned.find((x) => x.id === id)
   if (!p) return <Navigate to="/plan" replace />
@@ -119,7 +122,7 @@ export default function PlannedDetail() {
     ? `/log/multi/new?kind=${event.multisport}&date=${p.date}&title=${encodeURIComponent(p.title)}`
     : `/log/new?plan=${p.id}`
   const steady = w && !w.pieces?.length && !w.exercises?.length && !w.wod
-  const aim = w ? describeAim(w, w.sport, settings.units) : ''
+  const aim = w ? describeAim(w, w.sport, settings.units, zones) : ''
 
   const remove = () => {
     if (!confirm('Remove this session from the plan?')) return
@@ -239,6 +242,7 @@ function PlannedForm({ initial, editing }: { initial: PlannedDraft; editing: boo
   const { savePlanned } = usePlan()
   const { workouts } = useLog()
   const { settings } = useSettings()
+  const zones = useZoneContext()
   const navigate = useNavigate()
   const [draft, setDraft] = useState(initial)
   const [source, setSource] = useState<'library' | 'oneoff'>(initial.workoutId ? 'library' : 'oneoff')
@@ -293,7 +297,7 @@ function PlannedForm({ initial, editing }: { initial: PlannedDraft; editing: boo
                   <option value="">Choose…</option>
                   {options.map((w) => (
                     <option key={w.id} value={w.id}>
-                      {w.name} · {structureSummary(w, settings.units)}
+                      {w.name} · {structureSummary(w, settings.units, zones)}
                     </option>
                   ))}
                 </select>

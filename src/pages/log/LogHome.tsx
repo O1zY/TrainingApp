@@ -1,4 +1,4 @@
-import { Dumbbell, HeartPulse } from 'lucide-react'
+import { Dumbbell, Gauge, HeartPulse } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Chips } from '../../components/fields'
@@ -11,14 +11,18 @@ import { Feed } from './Feed'
 import { SportPicker } from './SessionForm'
 import { StravaBanner } from './Strava'
 import { WellbeingSummary } from './Wellbeing'
+import { currentMarkers, isDue } from '../../markers/markers'
+import { useSettings } from '../../settings/SettingsContext'
 
 export default function LogHome() {
   const navigate = useNavigate()
-  const { wellbeing, sessions } = useLog()
+  const { wellbeing, sessions, markers } = useLog()
+  const { settings } = useSettings()
   const [filter, setFilter] = useState<Sport | undefined>()
   const today = todayIso()
   const checkin = wellbeing.find((w) => w.date === today)
   const usedSports = LOGGABLE.filter((s) => sessions.some((x) => x.sport === s))
+  const dueCount = Object.values(currentMarkers(markers)).filter((m) => isDue(m, today, settings.retestWeeks)).length
 
   return (
     <div className="space-y-5">
@@ -51,16 +55,27 @@ export default function LogHome() {
             </Link>
           )}
         </Card>
-        <Card title="Strength">
-          <Link to="/log/maxes" className="flex items-center gap-3 text-sm">
-            <span className="grid size-10 place-items-center rounded-xl bg-sport-strength/15 text-sport-strength">
-              <Dumbbell className="size-5" />
-            </span>
-            <span>
-              <span className="block font-semibold">1RMs</span>
-              <span className="text-muted">Saved maxes, used to log sets as a % of 1RM.</span>
-            </span>
-          </Link>
+        <Card title="Your numbers">
+          <div className="space-y-3">
+            <Link to="/log/markers" className="flex items-center gap-3 text-sm">
+              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent-strong">
+                <Gauge className="size-5" />
+              </span>
+              <span>
+                <span className="block font-semibold">Fitness markers{dueCount ? ` · ${dueCount} due a re-test` : ''}</span>
+                <span className="text-muted">Run threshold, FTP, 2k, CSS and HR: they set your paces and watts.</span>
+              </span>
+            </Link>
+            <Link to="/log/maxes" className="flex items-center gap-3 text-sm">
+              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-sport-strength/15 text-sport-strength">
+                <Dumbbell className="size-5" />
+              </span>
+              <span>
+                <span className="block font-semibold">1RMs</span>
+                <span className="text-muted">Saved maxes, used to log sets as a % of 1RM.</span>
+              </span>
+            </Link>
+          </div>
         </Card>
       </div>
 

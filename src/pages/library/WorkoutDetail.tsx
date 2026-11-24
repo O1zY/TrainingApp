@@ -10,9 +10,11 @@ import { describeAim, summariseTargets } from '../../log/targets'
 import type { Workout } from '../../log/types'
 import { useSettings } from '../../settings/SettingsContext'
 import { Stat } from '../log/SessionDetail'
+import { useZoneContext } from '../../markers/useZones'
 
 export function Structure({ w }: { w: Workout }) {
   const { settings } = useSettings()
+  const zones = useZoneContext()
   const groups = groupPieces(w.pieces ?? [])
   return (
     <Card title={`Structure · ${w.pieces!.length} rep${w.pieces!.length === 1 ? '' : 's'}`}>
@@ -23,7 +25,7 @@ export function Structure({ w }: { w: Workout }) {
               <span className="tabular w-12 shrink-0 text-xs text-muted">{g.count > 1 ? `#${g.first + 1}–${g.first + g.count}` : `#${g.first + 1}`}</span>
               <span className="tabular font-semibold">{describeGroup(g, w.sport, settings.units)}</span>
             </span>
-            <span className="tabular pl-15 text-sm text-accent-strong sm:pl-0">{describeAim(g.piece, w.sport, settings.units)}</span>
+            <span className="tabular pl-15 text-sm text-accent-strong sm:pl-0">{describeAim(g.piece, w.sport, settings.units, zones)}</span>
             {g.piece.notes && <span className="pl-15 text-sm text-muted sm:hidden">{g.piece.notes}</span>}
           </li>
         ))}
@@ -107,6 +109,7 @@ export default function WorkoutDetail() {
   const { id } = useParams()
   const { workouts, saveWorkout, deleteWorkout } = useLog()
   const { settings } = useSettings()
+  const zones = useZoneContext()
   const navigate = useNavigate()
   const w = workouts.find((x) => x.id === id)
   if (!w) return <Navigate to="/library" replace />
@@ -115,7 +118,7 @@ export default function WorkoutDetail() {
   const type = def.types.find((t) => t.value === w.type)?.label
   const totals = plannedTotals(w)
   const unit = w.pieces?.length && w.sport !== 'bike' ? 'm' : distanceUnit(w.sport, settings.units)
-  const aim = describeAim(w, w.sport, settings.units)
+  const aim = describeAim(w, w.sport, settings.units, zones)
   const isLink = w.source && /^https?:\/\//.test(w.source)
 
   const remove = () => {

@@ -15,7 +15,9 @@ import {
 } from '../log/targets'
 import type { Aim, Piece, Sport, TargetMetric } from '../log/types'
 import { useSettings } from '../settings/SettingsContext'
+import { relLabel } from '../markers/zones'
 import { Field, NumberInput, ParsedInput, inputClass } from './fields'
+import { useZoneContext } from '../markers/useZones'
 
 /** Target metrics that make sense for a sport. */
 export function metricsFor(sport: Sport): TargetMetric[] {
@@ -30,10 +32,18 @@ export function metricsFor(sport: Sport): TargetMetric[] {
 const rateUnit = (sport: Sport) => (sport === 'bike' ? 'rpm' : 'spm')
 
 /** Target (two bounds, or one for "this or better"), HR zone and rate. Values are typed in display units. */
+/** Signed number: "-5", "−5", "+4" or "4". */
+const parseSigned = (t: string) => {
+  const n = Number(t.trim().replace('−', '-').replace('+', '').replace(',', '.'))
+  return t.trim() && Number.isFinite(n) ? n : undefined
+}
+
 export function AimFields({ sport, value, onChange }: { sport: Sport; value: Aim; onChange: (a: Aim) => void }) {
   const { settings } = useSettings()
   const metrics = metricsFor(sport)
-  const [metric, setMetric] = useState<TargetMetric>(value.target?.metric ?? metrics[0])
+  const relUnit = relLabel(sport)
+  const [choice, setChoice] = useState<TargetMetric | 'rel'>(value.rel && relUnit ? 'rel' : (value.target?.metric ?? metrics[0]))
+  const metric: TargetMetric = choice === 'rel' ? metrics[0] : choice
   const kind = paceKind(sport, settings.units)
   const speed = metric === 'pace' && kind != null && isSpeed(kind)
 
@@ -44,7 +54,7 @@ export function AimFields({ sport, value, onChange }: { sport: Sport; value: Aim
   const second = t && t.min != null && t.max != null ? (speed ? t.min : t.max) : undefined
   const toBase = (v?: number) => (v == null ? undefined : metric === 'pace' && kind ? paceToBase(kind, v) : v)
 
-  const set = (a?: number, b?: number) => onChange({ ...value, target: targetFromInputs(metric, toBase(a), toBase(b)) })
+  const set = (a?: number, b?: number) => onChange({ ...value, rel: undefined, target: targetFromInputs(metric, toBase(a), toBase(b)) })
 
   const valueInput = (v: number | undefined, onSet: (n?: number) => void, label: string) =>
     metric === 'pace' && kind && !speed ? (
@@ -71,10 +81,10 @@ export function AimFields({ sport, value, onChange }: { sport: Sport; value: Aim
       <Field label="Target">
         <select
           className={inputClass}
-          value={metric}
+          value={choice}
           onChange={(e) => {
-            setMetric(e.target.value as TargetMetric)
-            onChange({ ...value, target: undefined })
+            setChoice(e.target.value as TargetMetric | 'rel')
+            onChange({ ...value, target: undefined, rel: undefined })
           }}
         >
           {TARGET_METRICS.filter((m) => metrics.includes(m.value)).map((m) => (
@@ -82,14 +92,37 @@ export function AimFields({ sport, value, onChange }: { sport: Sport; value: Aim
               {m.label}
             </option>
           ))}
+          {relUnit && <option value="rel">{sport === 'bike' ? '% of FTP' : 'vs marker'}</option>}
         </select>
       </Field>
-      <Field label={metric === 'pace' && !speed ? 'Pace (or from)' : 'From'} unit={unit}>
-        {valueInput(shown(first), (a) => set(a, shown(second)), 'Target from')}
-      </Field>
-      <Field label="To" unit={unit} hint={undefined}>
-        {valueInput(shown(second), (b) => set(shown(first), b), 'Target to')}
-      </Field>
+      {choice === 'rel' ? (
+        <>
+          {(['lo', 'hi'] as const).map((end) => (
+            <Field key={end} label={end === 'lo' ? 'From' : 'To'} unit={relUnit}>
+              <ParsedInput<number>
+                aria-label={end === 'lo' ? 'Relative target from' : 'Relative target to'}
+                value={value.rel?.[end]}
+                placeholder={sport === 'bike' ? (end === 'lo' ? '95' : '105') : end === 'lo' ? '+4' : '—'}
+                format={(x) => (sport === 'bike' || x <= 0 ? String(x) : `+${x}`)}
+                parse={parseSigned}
+                onChange={(n) => {
+                  const rel = { ...value.rel, [end]: n }
+                  onChange({ ...value, target: undefined, rel: rel.lo == null && rel.hi == null ? undefined : rel })
+                }}
+              />
+            </Field>
+          ))}
+        </>
+      ) : (
+        <>
+          <Field label={metric === 'pace' && !speed ? 'Pace (or from)' : 'From'} unit={unit}>
+            {valueInput(shown(first), (a) => set(a, shown(second)), 'Target from')}
+          </Field>
+          <Field label="To" unit={unit} hint={undefined}>
+            {valueInput(shown(second), (b) => set(shown(first), b), 'Target to')}
+          </Field>
+        </>
+      )}
       <Field label="HR zone">
         <select className={inputClass} value={value.hrZone ?? ''} onChange={(e) => onChange({ ...value, hrZone: e.target.value ? Number(e.target.value) : undefined })}>
           <option value="">—</option>
@@ -112,8 +145,9 @@ export function AimFields({ sport, value, onChange }: { sport: Sport; value: Aim
 /** Collapsed "Target: …" line that opens the aim fields. Keeps per-rep forms short. */
 export function AimToggle({ sport, value, onChange, label = 'Add target' }: { sport: Sport; value: Aim; onChange: (a: Aim) => void; label?: string }) {
   const { settings } = useSettings()
+  const zones = useZoneContext()
   const [open, setOpen] = useState(false)
-  const text = describeAim(value, sport, settings.units)
+  const text = describeAim(value, sport, settings.units, zones)
   return (
     <div className="mt-2">
       <button
@@ -129,6 +163,7 @@ export function AimToggle({ sport, value, onChange, label = 'Add target' }: { sp
           <AimFields sport={sport} value={value} onChange={onChange} />
           <p className="mt-2 text-xs text-muted">
             One value means “this or better”: pace this or faster, watts or rate at least this. Two values make a range.
+            {relLabel(sport) && ' “vs marker” or “% of FTP” works the numbers out from your fitness markers when you log it; a zone does too.'}
           </p>
         </div>
       )}

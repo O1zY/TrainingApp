@@ -5,13 +5,14 @@ import { WOD_FORMATS, sessionName } from '../log/sports'
 import { findMax } from '../log/stats'
 import { describeAim } from '../log/targets'
 import type { Aim, OneRepMax, PieceTemplate, Session, Sport, Workout } from '../log/types'
+import { fixAim, type ZoneContext } from '../markers/zones'
 import type { Units } from '../settings/SettingsContext'
 
 export function blankWorkout(sport: Sport = 'erg'): WorkoutDraft {
   return { name: '', sport, tags: [] }
 }
 
-const aimOf = (a: Aim): Aim => ({ target: a.target, hrZone: a.hrZone, targetRate: a.targetRate })
+const aimOf = (a: Aim): Aim => ({ target: a.target, rel: a.rel, hrZone: a.hrZone, targetRate: a.targetRate })
 
 /** Rounds to the nearest 2.5kg plate jump, which is what a % of 1RM becomes on the bar. */
 export const roundToPlates = (kg: number) => Math.round(kg / 2.5) * 2.5
@@ -19,12 +20,15 @@ export const roundToPlates = (kg: number) => Math.round(kg / 2.5) * 2.5
 /**
  * A log pre-filled from a workout. Only the fixed parts are filled in (a rep's set
  * distance or time, rest, targets, planned weights), so you just type what actually happened.
+ * With a zone context, zone and relative targets are written in as the paces or watts they
+ * mean today, so the session is judged later against what was asked at the time.
  */
-export function sessionFromWorkout(w: Workout, maxes: OneRepMax[], date?: string): SessionDraft {
+export function sessionFromWorkout(w: Workout, maxes: OneRepMax[], date?: string, ctx?: ZoneContext): SessionDraft {
   const steady = !w.pieces?.length
+  const aim = (a: Aim) => fixAim(aimOf(a), w.sport, ctx)
   return {
     ...blankSession(w.sport, date),
-    ...aimOf(w),
+    ...aim(w),
     type: w.type,
     title: w.name,
     workoutId: w.id,
@@ -32,7 +36,7 @@ export function sessionFromWorkout(w: Workout, maxes: OneRepMax[], date?: string
     distanceM: steady ? w.distanceM : undefined,
     pieces: w.pieces?.map((p) => ({
       id: newId(),
-      ...aimOf(p),
+      ...aim(p),
       // A distance rep's time is the result, and vice versa, so only the fixed one is copied.
       distanceM: p.distanceM,
       durationSec: p.distanceM ? undefined : p.durationSec,
@@ -116,7 +120,7 @@ export const pieceUnit = (sport: Sport, units: Units) => (sport === 'bike' ? dis
 
 /** Consecutive reps that are identical, so 8 matching rows read as "8 × 500m". */
 export function groupPieces(pieces: PieceTemplate[]) {
-  const key = (p: PieceTemplate) => JSON.stringify([p.distanceM, p.durationSec, p.restSec, p.target, p.hrZone, p.targetRate, p.notes])
+  const key = (p: PieceTemplate) => JSON.stringify([p.distanceM, p.durationSec, p.restSec, p.target, p.rel, p.hrZone, p.targetRate, p.notes])
   const groups: { count: number; piece: PieceTemplate; first: number }[] = []
   pieces.forEach((p, i) => {
     const last = groups.at(-1)
@@ -141,11 +145,11 @@ export function describeGroup(g: { count: number; piece: PieceTemplate }, sport:
 }
 
 /** One line for library cards. */
-export function structureSummary(w: Workout, units: Units): string {
+export function structureSummary(w: Workout, units: Units, ctx?: ZoneContext): string {
   if (w.pieces?.length) {
     const groups = groupPieces(w.pieces)
     const shape = groups.map((g) => `${g.count > 1 ? `${g.count}×` : ''}${pieceLength(g.piece, w.sport, units)}`).join(' + ')
-    const aim = groups.length === 1 ? describeAim(groups[0].piece, w.sport, units) : ''
+    const aim = groups.length === 1 ? describeAim(groups[0].piece, w.sport, units, ctx) : ''
     return [shape, aim].filter(Boolean).join(' · ')
   }
   if (w.exercises?.length) {
@@ -154,7 +158,7 @@ export function structureSummary(w: Workout, units: Units): string {
   }
   if (w.wod) return [WOD_FORMATS.find((f) => f.value === w.wod!.format)?.label, w.wod.timeCapSec && formatPlanTime(w.wod.timeCapSec)].filter(Boolean).join(' · ')
   const unit = distanceUnit(w.sport, units)
-  return [w.durationSec && formatPlanTime(w.durationSec), w.distanceM && `${formatDistance(w.distanceM, unit)}${unit}`, describeAim(w, w.sport, units)]
+  return [w.durationSec && formatPlanTime(w.durationSec), w.distanceM && `${formatDistance(w.distanceM, unit)}${unit}`, describeAim(w, w.sport, units, ctx)]
     .filter(Boolean)
     .join(' · ')
 }

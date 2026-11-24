@@ -46,6 +46,9 @@ export interface CoachInput {
 export const MAX_WEEKS = 20
 
 /** Rough minutes for a hard session, used to share the week's time out. */
+/** Race sports tested in this order, one per deload week. */
+const TEST_ORDER: Sport[] = ['run', 'bike', 'swim']
+
 const KEY_MIN: Partial<Record<Sport, number>> = { run: 50, bike: 70, swim: 45, strength: 50, erg: 60, row: 75 }
 /** Typical session counts for sports kept up alongside the goal. */
 const KEEP_MIN = 45
@@ -314,6 +317,16 @@ export function coachPlan(input: CoachInput): CoachResult {
     say('Race week', `${race.name} is a ${race.priority} race: a lighter race week rather than a full taper.`, [], true)
   }
 
+  // ---- Testing ------------------------------------------------------------------------------
+  const tested = TEST_ORDER.filter((t) => sports.some((b) => b.sport === t && b.key > 0))
+  if (tested.length && !healthStop)
+    say(
+      'Testing',
+      `The last session of each deload week is a test (${tested.map((t) => ({ run: '30′ run', bike: '20′ bike', swim: '400 + 200 swim' })[t as 'run']).join(', then ')}${tested.length > 1 ? ', in turn' : ''}), while you're fresh. Each one updates your fitness markers, which set the paces and watts of every session.`,
+      [],
+      true,
+    )
+
   // ---- Fitting it round work and life ---------------------------------------------------------
   say(
     'Your week',
@@ -337,6 +350,7 @@ export function coachPlan(input: CoachInput): CoachResult {
     doubles: !!av.doubles,
     restDay: av.restDay,
     benchmarks: [],
+    testSports: TEST_ORDER.filter((t) => sports.some((b) => b.sport === t && b.key > 0)),
     libraryMix: 40,
     weekKinds: Object.keys(weekKinds).length ? weekKinds : undefined,
   }

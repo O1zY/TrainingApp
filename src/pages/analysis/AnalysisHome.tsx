@@ -15,6 +15,7 @@ import type { Sport } from '../../log/types'
 import { addDays, weekStart } from '../../plan/dates'
 import { usePlan } from '../../plan/PlanStore'
 import { useSettings } from '../../settings/SettingsContext'
+import { MarkersSection } from './MarkersSection'
 
 type Range = '4w' | '12w' | '26w' | '52w'
 const RANGES: { value: Range; label: string; weeks: number }[] = [
@@ -70,6 +71,7 @@ export default function AnalysisHome() {
         <WellbeingSection from={from} today={today} />
         <AdherenceSection weeks={weeks} today={today} hasPlan={planned.length > 0} />
         <TrendsSection weeks={weeks} metric={metric} setMetric={setMetric} />
+        <MarkersSection today={today} />
         <PbSection />
       </div>
     </>

@@ -4,7 +4,7 @@ import { blockWeeks, weekLabel, type PlanWeek } from './cycle'
 import { addDays, clockMin, minClock, weekDates, weekday } from './dates'
 import { covers } from './events'
 import { dayLoad, weekWork, type DayLoad } from './load'
-import { buildOneOff, estimateSec, specsFor } from './oneOffs'
+import { buildOneOff, estimateSec, specsFor, testOneOff } from './oneOffs'
 import type { Block, Commitment, Intensity, OneOff, PlanEvent, PlanPrefs, PlannedSession } from './types'
 
 // The planner. For each week of a block it works out what sessions the week needs
@@ -86,14 +86,16 @@ export function planBlock(input: PlanInput): PlanResult {
   const weeks = blockWeeks(block, events)
   const planned: PlannedSession[] = []
   const notes: string[] = []
+  let deloads = 0
   for (const week of weeks) {
+    const deloadNo = week.kind === 'deload' ? deloads++ : 0
     if (week.start < addDays(input.from, -6)) continue
-    planned.push(...planWeek(input, week, notes))
+    planned.push(...planWeek(input, week, notes, deloadNo))
   }
   return { planned, weeks, notes }
 }
 
-function weekSlots(block: Block, week: PlanWeek, workHours: number, notes: string[]): Slot[] {
+function weekSlots(block: Block, week: PlanWeek, workHours: number, notes: string[], deloadNo = 0): Slot[] {
   const slots: Slot[] = []
   const endurance = block.sports.filter((s) => s.sport !== 'recovery')
   const dropEasy = workHours > 55 ? 2 : workHours > 45 ? 1 : 0
@@ -129,7 +131,12 @@ function weekSlots(block: Block, week: PlanWeek, workHours: number, notes: strin
   if (dropEasy) notes.push(`Week of ${week.start}: ${Math.round(workHours)}h of work, so ${dropEasy} easy session${dropEasy > 1 ? 's' : ''} dropped and easy volume cut`)
 
   const main = [...endurance].sort((a, b) => b.key - a.key || b.sessions - a.sessions)[0]
-  if (week.kind === 'deload' && main) slots.push({ sport: main.sport, intensity: 'key', test: true, nth: 0 })
+  if (week.kind === 'deload' && main) {
+    // One test per deload, taking the block's test sports in turn so every marker stays current.
+    const testSports = (block.testSports ?? []).filter((s) => endurance.some((b) => b.sport === s))
+    const sport = testSports.length ? testSports[deloadNo % testSports.length] : main.sport
+    slots.push({ sport, intensity: 'key', test: true, nth: 0 })
+  }
   if (week.kind === 'race' || week.kind === 'taper') {
     for (const race of week.races) {
       if (race.priority === 'C') continue
@@ -187,6 +194,12 @@ function fill(input: PlanInput, week: PlanWeek, slot: Slot, rand: () => number, 
     const keyBench = benchmarks.filter((w) => workoutIntensity(w) === 'key')
     const pick = tests[0] ?? keyBench[week.index % (keyBench.length || 1)]
     if (pick) return fromLibrary(pick, benchmarks.includes(pick))
+    // No all-out test in a block with no hard work in it (e.g. after a health flag).
+    const builtIn = block.sports.some((b) => b.sport !== 'strength' && b.key > 0) ? testOneOff(slot.sport) : undefined
+    if (builtIn) {
+      const sec = estimateSec(builtIn)
+      return { slot, title: builtIn.name, oneOff: builtIn, durationSec: sec, minSec: sec }
+    }
     return fromSpec('moderate', 1)
   }
 
@@ -237,7 +250,7 @@ function take(free: [number, number][], from: number, to: number) {
   })
 }
 
-function planWeek(input: PlanInput, week: PlanWeek, notes: string[]): PlannedSession[] {
+function planWeek(input: PlanInput, week: PlanWeek, notes: string[], deloadNo: number): PlannedSession[] {
   const { block, events, commitments, prefs, fixed, from } = input
   const dates = weekDates(week.start)
   const loads = dates.map((d) => dayLoad(d, commitments, prefs))
@@ -267,7 +280,7 @@ function planWeek(input: PlanInput, week: PlanWeek, notes: string[]): PlannedSes
   }
 
   const workScale = work.hours > 55 ? 0.8 : work.hours > 45 ? 0.9 : 1
-  let slots = weekSlots(block, week, work.hours, notes)
+  let slots = weekSlots(block, week, work.hours, notes, deloadNo)
 
   // Sessions already fixed in this week fill the slots they match.
   for (const p of fixedHere) {
@@ -319,6 +332,8 @@ function planWeek(input: PlanInput, week: PlanWeek, notes: string[]): PlannedSes
         score -= day.load.freeMin / 30
       }
       if (slot.long) score -= day.load.freeMin / 6
+      // Tests go late in the deload week, when the athlete is freshest.
+      if (slot.test) score += (6 - dates.indexOf(day.date)) * 30
       if (slot.intensity === 'easy' && neighbours.some((d) => d.sessions.some((s) => s.sport === slot.sport))) score += 15
       if (day.preRace) score += 30
       if (moving.length && !recovery) {

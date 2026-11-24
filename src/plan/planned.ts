@@ -3,6 +3,7 @@ import { todayIso } from '../log/format'
 import type { SessionDraft } from '../log/LogStore'
 import { useLog } from '../log/LogStore'
 import type { OneRepMax, Session, Workout } from '../log/types'
+import type { ZoneContext } from '../markers/zones'
 import { addDays } from './dates'
 import { planBlock } from './generate'
 import { usePlan } from './PlanStore'
@@ -16,9 +17,9 @@ export function plannedWorkout(p: PlannedSession, workouts: Workout[]): Workout 
 }
 
 /** A log pre-filled from the plan: the workout's structure and targets, on the planned day and time. */
-export function sessionFromPlanned(p: PlannedSession, workouts: Workout[], maxes: OneRepMax[]): SessionDraft {
+export function sessionFromPlanned(p: PlannedSession, workouts: Workout[], maxes: OneRepMax[], ctx?: ZoneContext): SessionDraft {
   const w = plannedWorkout(p, workouts) ?? { id: '', name: p.title, sport: p.sport, tags: [], createdAt: '', updatedAt: '' }
-  return { ...sessionFromWorkout(w, maxes, p.date), workoutId: p.workoutId, planId: p.id, startTime: p.time, title: p.title }
+  return { ...sessionFromWorkout(w, maxes, p.date, ctx), workoutId: p.workoutId, planId: p.id, startTime: p.time, title: p.title }
 }
 
 export const loggedFor = (p: PlannedSession, sessions: Session[]) => sessions.find((s) => s.planId === p.id)

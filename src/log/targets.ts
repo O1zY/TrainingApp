@@ -1,6 +1,7 @@
 import type { Units } from '../settings/SettingsContext'
 import { PACE_LABEL, formatPace, isSpeed, paceFromBase, paceKind } from './format'
 import { pieceWatts } from './stats'
+import { describeRel, resolveAim, type ZoneContext } from '../markers/zones'
 import type { Aim, Piece, Session, Sport, Target, TargetMetric } from './types'
 
 // Grading reps (and steady sessions) against what they were meant to be.
@@ -132,13 +133,19 @@ export function describeTarget(t: Target, sport: Sport, units: Units): string {
     return `${f(a)}–${f(b)}${unit}`
   }
   const shown = `${f((t.min ?? t.max)!)}${unit}`
-  if (t.metric === 'pace') return `${shown} or faster`
+  // Pace is s/km: an upper bound means "this or faster", a lower bound "this or slower".
+  if (t.metric === 'pace') return `${shown} ${t.max != null ? 'or faster' : 'or slower'}`
   return t.min != null ? `${shown} or more` : `${shown} or less`
 }
 
-/** One-line description of an aim: target · zone · rate. */
-export function describeAim(a: Aim, sport: Sport, units: Units): string {
-  return [a.target && describeTarget(a.target, sport, units), a.hrZone && `Z${a.hrZone}`, a.targetRate && `r${a.targetRate}`].filter(Boolean).join(' · ')
+/**
+ * One-line description of an aim: target · zone · rate. With a zone context, a zone or
+ * relative target also shows the pace or watts it means from the current fitness marker.
+ */
+export function describeAim(a: Aim, sport: Sport, units: Units, ctx?: ZoneContext): string {
+  const r = resolveAim(a, sport, ctx)
+  const target = r ? `${describeTarget(r.target, sport, units)}${r.stale ? ' (old marker: re-test)' : ''}` : a.rel ? describeRel(sport, a.rel) : undefined
+  return [target, r?.derived && a.rel && describeRel(sport, a.rel), a.hrZone && `Z${a.hrZone}`, a.targetRate && `r${a.targetRate}`].filter(Boolean).join(' · ')
 }
 
 /**

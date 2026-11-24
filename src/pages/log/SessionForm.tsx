@@ -12,6 +12,7 @@ import { sessionFromPlanned } from '../../plan/planned'
 import { usePlan } from '../../plan/PlanStore'
 import type { Sport } from '../../log/types'
 import { SessionFields } from './SessionFields'
+import { useZoneContext } from '../../markers/useZones'
 
 export function SportPicker({ value, onPick, multisport = true }: { value?: Sport; onPick: (s: Sport) => void; multisport?: boolean }) {
   return (
@@ -123,12 +124,13 @@ export function NewSession() {
   const [params] = useSearchParams()
   const { sessions, workouts, maxes } = useLog()
   const { planned } = usePlan()
+  const zones = useZoneContext()
   const plan = planned.find((p) => p.id === params.get('plan'))
   const from = sessions.find((s) => s.id === params.get('from'))
   const workout = workouts.find((w) => w.id === params.get('workout'))
   const sport = (params.get('sport') as Sport | null) ?? 'erg'
   const date = params.get('date') ?? undefined
-  const initial = plan ? sessionFromPlanned(plan, workouts, maxes) : workout ? sessionFromWorkout(workout, maxes, date) : from ? copyOf(from) : blankSession(SPORTS[sport] ? sport : 'erg', date)
+  const initial = plan ? sessionFromPlanned(plan, workouts, maxes, zones) : workout ? sessionFromWorkout(workout, maxes, date, zones) : from ? copyOf(from) : blankSession(SPORTS[sport] ? sport : 'erg', date)
   return (
     <>
       <PageHeader title="Log session" subtitle="Quick: sport, time and RPE. Open the sections for full detail." />
