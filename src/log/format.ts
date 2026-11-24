@@ -30,6 +30,12 @@ export function formatTime(sec: number | undefined, tenths = true): string {
   return h ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`
 }
 
+/** 3000 → "0:50", 5430 → "1:30": total time as hours:minutes, for tiles labelled "h". */
+export function formatHoursMinutes(sec: number): string {
+  const totalMin = Math.round(Math.max(0, sec) / 60)
+  return `${Math.floor(totalMin / 60)}:${String(totalMin % 60).padStart(2, '0')}`
+}
+
 /** Clock time "HH:MM[:SS]" → seconds after midnight. */
 export function clockToSec(t: string | undefined): number | undefined {
   if (!t) return undefined

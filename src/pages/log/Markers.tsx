@@ -186,7 +186,7 @@ function ZonesCard() {
   return (
     <Card title="Your zones" action={<Link to="/settings#zones" className="text-sm font-medium text-accent-strong">Edit zones</Link>}>
       {sports.length ? (
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {sports.map((sport) => {
             const t = ZONE_TABLES[sport]
             const m = currentMarker(markers, MARKER_FOR_SPORT[sport]!)!

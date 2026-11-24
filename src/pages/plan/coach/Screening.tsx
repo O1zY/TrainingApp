@@ -7,7 +7,7 @@ import { Card, PageHeader } from '../../../components/ui'
 import { trainingHistory, workPattern } from '../../../coach/history'
 import { FORMAT_LABEL, blankLegs, formatsFor, presetLegs } from '../../../coach/races'
 import { HEALTH_QUESTIONS, SECTIONS, allFlags, healthFlags, injuryTitle, progress, type SectionKey } from '../../../coach/screening'
-import { EMPTY_PROFILE, type AthleteProfile, type Equipment, type Experience, type Injury, type RaceAim, type SwimLevel } from '../../../coach/types'
+import { EMPTY_PROFILE, RACE_AIMS, type AthleteProfile, type Equipment, type Experience, type Injury, type SwimLevel } from '../../../coach/types'
 import { distanceFactor, distanceUnit, formatDate, newId, todayIso } from '../../../log/format'
 import { useLog } from '../../../log/LogStore'
 import { SPORTS } from '../../../log/sports'
@@ -22,12 +22,6 @@ import { FlagNote, HistorySummary, InjuryEditor, Question, WorkSummary } from '.
 // plan. What the app already knows (training history, work pattern) is shown to check,
 // not asked for; the rest is asked once and kept as the athlete profile.
 
-const AIMS: { value: RaceAim; label: string }[] = [
-  { value: 'finish', label: 'Finish strong' },
-  { value: 'pb', label: 'Personal best' },
-  { value: 'qualify', label: 'Qualify' },
-  { value: 'place', label: 'Place / podium' },
-]
 const EXPERIENCE: { value: Experience; label: string }[] = [
   { value: 'first', label: 'First one' },
   { value: 'some', label: 'Done a few' },
@@ -148,7 +142,7 @@ export default function Screening() {
       <div className="max-w-3xl space-y-3">
         <Section title={title('goal')} summary={summary('goal')} defaultOpen={firstOpen === 'goal'}>
           <div className="space-y-4">
-            <Field label="Race" hint={race ? [formatDate(race.date), raceLabel(race), race.priority && `${race.priority} race`].filter(Boolean).join(' · ') : undefined}>
+            <Field label="Race" hint={race ? [formatDate(race.date), raceLabel(race)].filter(Boolean).join(' · ') : undefined}>
               <select
                 className={inputClass}
                 value={goal.eventId ?? ''}
@@ -176,7 +170,7 @@ export default function Screening() {
               </FieldGroup>
             )}
             {goal.legs.length > 0 && (
-              <div className="grid gap-3 sm:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 {goal.legs.map((leg, i) => {
                   const unit = distanceUnit(leg.sport, settings.units)
                   return (
@@ -192,8 +186,8 @@ export default function Screening() {
                 })}
               </div>
             )}
-            <FieldGroup label="Aiming to">{pick(goal.aim, AIMS, (aim) => setGoal({ aim }))}</FieldGroup>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <FieldGroup label="Aiming to">{pick(goal.aim, RACE_AIMS, (aim) => setGoal({ aim }))}</FieldGroup>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field label="Target time (optional)">
                 <TimeInput value={goal.targetSec} onChange={(targetSec) => setGoal({ targetSec })} placeholder="h:mm:ss" />
               </Field>
@@ -253,7 +247,7 @@ export default function Screening() {
         <Section title={title('history')} summary={summary('history')} defaultOpen={firstOpen === 'history'}>
           <div className="space-y-4">
             <HistorySummary h={history} />
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field label="Years of regular endurance training">
                 <NumberInput value={draft.trainingYears} onChange={(trainingYears) => patch({ trainingYears })} decimals={1} />
               </Field>
@@ -281,7 +275,7 @@ export default function Screening() {
                 ))}
               </div>
             </FieldGroup>
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <Field label="Most hours a week">
                 <NumberInput value={av.hoursPerWeek} onChange={(hoursPerWeek) => setAv({ hoursPerWeek })} decimals={1} />
               </Field>

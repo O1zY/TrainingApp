@@ -65,7 +65,7 @@ export function SyncCard() {
           session. What’s already in this browser is added to the account the first time. Strava sign-in stays on the device that connected it.
         </p>
         {status.error && <p className="mt-3 rounded-lg bg-over/15 px-3 py-2 text-sm">{status.error}</p>}
-        <form onSubmit={submit} className="mt-4 grid gap-3 sm:grid-cols-2">
+        <form onSubmit={submit} className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Email">
             <input type="email" autoComplete="email" required className={input} value={email} onChange={(e) => setEmail(e.target.value)} />
           </Field>

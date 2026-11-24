@@ -290,7 +290,7 @@ function Form({ initial, editing }: { initial: WorkoutDraft; editing: boolean })
 
       {def.types.length > 0 && <Chips value={draft.type} options={def.types} onChange={(type) => patch({ type, ...((type === 'wod' || type === 'mixed') && !draft.wod ? { wod: { format: 'amrap' } } : {}) })} />}
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Field label="Name" className="sm:col-span-2">
           <input className={`${inputClass} font-semibold`} required placeholder="e.g. 8 × 500m race pace" value={draft.name} onChange={(e) => patch({ name: e.target.value })} />
         </Field>
@@ -367,7 +367,7 @@ function Form({ initial, editing }: { initial: WorkoutDraft; editing: boolean })
           </button>
         ))}
 
-      <div className="fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-10 border-t border-line bg-surface/95 px-4 py-3 backdrop-blur md:bottom-0 md:left-60">
+      <div className="fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-10 border-t border-line bg-surface/95 px-4 py-3 backdrop-blur md:bottom-0 md:left-64">
         <div className="mx-auto flex max-w-6xl items-center justify-end gap-2 md:px-4">
           <button type="button" onClick={() => navigate(-1)} className="rounded-lg border border-line px-4 py-2.5 text-sm font-semibold hover:bg-surface-2">
             Cancel

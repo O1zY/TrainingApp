@@ -3,8 +3,8 @@ import type { ReactNode } from 'react'
 
 export function PageHeader({ title, subtitle, action }: { title: string; subtitle?: string; action?: ReactNode }) {
   return (
-    <div className="mb-7 flex items-end justify-between gap-4">
-      <div>
+    <div className="mb-7 flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
+      <div className="min-w-0 flex-1 basis-36">
         <h1 className="text-3xl font-bold md:text-4xl">{title}</h1>
         {subtitle && <p className="mt-1 text-sm text-muted">{subtitle}</p>}
       </div>
@@ -15,7 +15,7 @@ export function PageHeader({ title, subtitle, action }: { title: string; subtitl
 
 export function Card({ title, action, children, className = '' }: { title?: string; action?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <section className={`rounded-[20px] border border-line/70 bg-surface p-4 md:p-6 ${className}`}>
+    <section className={`min-w-0 rounded-[20px] border border-line/70 bg-surface p-4 md:p-6 ${className}`}>
       {title && (
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-base font-semibold tracking-tight">{title}</h2>
@@ -29,7 +29,7 @@ export function Card({ title, action, children, className = '' }: { title?: stri
 
 export function StatTile({ label, value, unit }: { label: string; value: string; unit?: string }) {
   return (
-    <div className="rounded-[20px] border border-line/70 bg-surface p-4 md:p-5">
+    <div className="min-w-0 rounded-[20px] border border-line/70 bg-surface p-4 md:p-5">
       <div className="text-xs font-medium text-muted">{label}</div>
       <div className="tabular font-display mt-2 text-3xl font-bold tracking-tight">
         {value}

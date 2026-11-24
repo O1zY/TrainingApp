@@ -5,7 +5,7 @@ import type { Block, BlockSport, CoachNote, PlanEvent, WeekKind } from '../plan/
 import { FINDINGS } from './evidence'
 import type { TrainingHistory, WorkPattern } from './history'
 import { excluded, healthFlags, injuryTitle, progress } from './screening'
-import type { Aggravator, AthleteProfile, RaceLeg } from './types'
+import { RACE_AIMS, type Aggravator, type AthleteProfile, type RaceLeg } from './types'
 
 // The rule-based coach (section 11c, without an AI): turns the screening and the research
 // library into a training block for the existing planner, which then places every session
@@ -338,7 +338,7 @@ export function coachPlan(input: CoachInput): CoachResult {
 
   const block: CoachBlock = {
     name: base ? `${race.name}: base` : `${race.name} block`,
-    goal: [profile.goal.aim && `Aim: ${profile.goal.aim}`, profile.goal.aimNotes].filter(Boolean).join(' · ') || undefined,
+    goal: [profile.goal.aim && `Aim: ${RACE_AIMS.find((a) => a.value === profile.goal.aim)?.label ?? profile.goal.aim}`, profile.goal.aimNotes].filter(Boolean).join(' · ') || undefined,
     start,
     weeks,
     buildWeeks,

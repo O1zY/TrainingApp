@@ -167,7 +167,7 @@ export default function PlanHome() {
             </Link>
           </div>
         </EmptyState>
-        <div className="mt-5 grid gap-5 md:grid-cols-2">{sideCards}</div>
+        <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-2">{sideCards}</div>
       </>
     )
   }
@@ -228,11 +228,11 @@ export default function PlanHome() {
           <BlockWave weeks={weeks} selected={start} onPick={go} />
         </Card>
 
-        <div className="grid gap-5 lg:grid-cols-3">
-          <div className="space-y-5 lg:col-span-2">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+          <div className="min-w-0 space-y-5 lg:col-span-2">
             <Card>
               <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <button type="button" aria-label="Previous week" onClick={() => go(addDays(start, -7))} className="grid size-8 place-items-center rounded-lg border border-line hover:bg-surface-2">
                     <ChevronLeft className="size-4" />
                   </button>
@@ -263,7 +263,7 @@ export default function PlanHome() {
             </Card>
           </div>
 
-          <div className="space-y-5">
+          <div className="min-w-0 space-y-5">
             <div className="grid grid-cols-2 gap-3">
               <StatTile label="Planned" value={(plannedSec / 3600).toFixed(1)} unit="h" />
               <StatTile label="Done" value={`${done}/${weekPlanned.length}`} />

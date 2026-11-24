@@ -70,7 +70,7 @@ export function MarkersSection({ today }: { today: string }) {
 
   return (
     <Card title="Fitness markers" action={<Link to="/log/markers" className="text-sm font-medium text-accent-strong">All markers</Link>}>
-      <div className="grid gap-5 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
         {kinds.map((d) => {
           const hist = markerHistory(markers, d.kind)
           const cur = hist.at(-1)!

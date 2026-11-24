@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { backupDue, daysSinceBackup, downloadBackup, readMeta } from '../backup'
 import { Link } from 'react-router-dom'
 import { Card, StatTile } from '../components/ui'
-import { formatTime, todayIso } from '../log/format'
+import { formatHoursMinutes, todayIso } from '../log/format'
 import { useLog } from '../log/LogStore'
 import { SPORTS } from '../log/sports'
 import { sessionLoad } from '../log/stats'
@@ -68,7 +68,7 @@ export default function Home() {
       <MorningCheckCard />
       <ReviewDueCard />
 
-      <div className="grid gap-5 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
         <Card title="Today" className="lg:col-span-2">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0 flex-1 space-y-2">
@@ -157,7 +157,7 @@ export default function Home() {
       </Card>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-5">
-        <StatTile label="Time this week" value={weekSec ? formatTime(weekSec, false).replace(/:\d\d$/, '') : '0:00'} unit="h" />
+        <StatTile label="Time this week" value={formatHoursMinutes(weekSec)} unit="h" />
         <StatTile label="Distance" value={weekDist ? weekDist.toFixed(1) : '0'} unit={distUnit} />
         <StatTile label="Sessions" value={String(week.length)} />
         <StatTile label="Training load" value={weekLoad ? String(weekLoad) : '—'} />

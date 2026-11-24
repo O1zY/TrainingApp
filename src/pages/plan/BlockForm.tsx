@@ -120,7 +120,7 @@ function Form({ initial, editing }: { initial: BlockDraft; editing: boolean }) {
   return (
     <form onSubmit={submit} className="space-y-5 pb-24">
       <Card title="Block">
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Name">
             <TextInput value={draft.name || undefined} onChange={(v) => patch({ name: v ?? '' })} placeholder="e.g. Winter base" />
           </Field>
@@ -288,7 +288,7 @@ function Form({ initial, editing }: { initial: BlockDraft; editing: boolean }) {
         </button>
       )}
 
-      <div className="fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-10 border-t border-line bg-surface/95 px-4 py-3 backdrop-blur md:bottom-0 md:left-60">
+      <div className="fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-10 border-t border-line bg-surface/95 px-4 py-3 backdrop-blur md:bottom-0 md:left-64">
         <div className="mx-auto flex max-w-6xl items-center justify-end gap-2 md:px-4">
           <button type="button" onClick={() => navigate(-1)} className="rounded-lg border border-line px-4 py-2.5 text-sm font-semibold hover:bg-surface-2">
             Cancel
