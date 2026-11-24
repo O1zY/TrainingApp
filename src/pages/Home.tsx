@@ -1,4 +1,4 @@
-import { DatabaseBackup, Flag, HeartPulse } from 'lucide-react'
+import { DatabaseBackup, Flag, Gauge, HeartPulse } from 'lucide-react'
 import { useState } from 'react'
 import { backupDue, daysSinceBackup, downloadBackup, readMeta } from '../backup'
 import { Link } from 'react-router-dom'
@@ -14,6 +14,9 @@ import { raceLabel } from '../plan/events'
 import { loggedFor } from '../plan/planned'
 import { usePlan } from '../plan/PlanStore'
 import { useSettings } from '../settings/SettingsContext'
+import { suggestFromLog } from '../markers/estimate'
+import { MARKERS, currentMarkers, formatMarker, isDue } from '../markers/markers'
+import { MorningCheckCard, ReviewDueCard } from './plan/ReviewCards'
 
 function greeting(d: Date) {
   const h = d.getHours()
@@ -62,6 +65,8 @@ export default function Home() {
       </div>
 
       <BackupReminder sessionCount={sessions.length} />
+      <MorningCheckCard />
+      <ReviewDueCard />
 
       <div className="grid gap-5 lg:grid-cols-3">
         <Card title="Today" className="lg:col-span-2">
@@ -158,6 +163,8 @@ export default function Home() {
         <StatTile label="Training load" value={weekLoad ? String(weekLoad) : '—'} />
       </div>
 
+      <MarkersStrip />
+
       <Card title="Recent activity" action={<Link to="/log" className="text-sm font-medium text-accent-strong">All history</Link>}>
         <Feed limitDays={5} />
       </Card>
@@ -188,5 +195,50 @@ function BackupReminder({ sessionCount }: { sessionCount: number }) {
         Download backup
       </button>
     </div>
+  )
+}
+
+/** Current fitness markers in a line, with any due a re-test; a nudge when none are set. */
+function MarkersStrip() {
+  const { markers, sessions } = useLog()
+  const { settings } = useSettings()
+  const today = todayIso()
+  const current = currentMarkers(markers)
+  const shown = MARKERS.filter((d) => d.sport && current[d.kind])
+  const suggestions = suggestFromLog(sessions, markers, today, settings.maxHR)
+  if (!shown.length && !suggestions.length) {
+    return (
+      <Link to="/log/markers" className="flex items-center gap-3 rounded-xl border border-dashed border-line px-4 py-3 text-sm hover:bg-surface-2">
+        <Gauge className="size-4 shrink-0 text-accent-strong" />
+        <span>
+          <span className="font-semibold">Add your fitness markers</span>
+          <span className="text-muted"> (run threshold, FTP, 2k, CSS) so planned sessions show real paces and watts.</span>
+        </span>
+      </Link>
+    )
+  }
+  return (
+    <Card title="Fitness markers" action={<Link to="/log/markers" className="text-sm font-medium text-accent-strong">Open</Link>}>
+      <div className="flex flex-wrap gap-2">
+        {shown.map((d) => {
+          const m = current[d.kind]!
+          const due = isDue(m, today, settings.retestWeeks)
+          return (
+            <span key={d.kind} className={`rounded-lg px-3 py-1.5 text-sm ${due ? 'bg-accent-soft' : 'bg-surface-2'}`}>
+              <span className="text-muted">{d.short}</span> <span className="tabular font-semibold">{formatMarker(d.kind, m.value, settings.units)}</span>
+              {due && <span className="ml-1.5 text-xs font-semibold text-accent-strong">re-test due</span>}
+            </span>
+          )
+        })}
+      </div>
+      {suggestions.length > 0 && (
+        <p className="mt-3 text-sm">
+          <Link to="/log/markers" className="font-medium text-accent-strong">
+            {suggestions.length} new result{suggestions.length === 1 ? '' : 's'} in your log
+          </Link>{' '}
+          <span className="text-muted">could update {suggestions.length === 1 ? 'a marker' : 'your markers'}.</span>
+        </p>
+      )}
+    </Card>
   )
 }

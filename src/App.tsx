@@ -15,6 +15,7 @@ const pick = <M, K extends keyof M>(load: () => Promise<M>, name: K) => lazy(() 
 const Home = lazy(() => import('./pages/Home'))
 const LogHome = lazy(() => import('./pages/log/LogHome'))
 const Maxes = lazy(() => import('./pages/log/Maxes'))
+const Markers = lazy(() => import('./pages/log/Markers'))
 const multisport = () => import('./pages/log/Multisport')
 const NewMultisport = pick(multisport, 'NewMultisport')
 const EditMultisport = pick(multisport, 'EditMultisport')
@@ -45,6 +46,7 @@ const PlannedDetail = lazy(plannedDetail)
 const NewPlanned = pick(plannedDetail, 'NewPlanned')
 const EditPlanned = pick(plannedDetail, 'EditPlanned')
 const Work = lazy(() => import('./pages/plan/Work'))
+const Review = lazy(() => import('./pages/plan/Review'))
 const Screening = lazy(() => import('./pages/plan/coach/Screening'))
 const Research = lazy(() => import('./pages/plan/coach/Research'))
 const CoachPlan = lazy(() => import('./pages/plan/coach/CoachPlan'))
@@ -70,6 +72,7 @@ export default function App() {
                     <Route path="block/new" element={<NewBlock />} />
                     <Route path="block/:id/edit" element={<EditBlock />} />
                     <Route path="work" element={<Work />} />
+                    <Route path="review/:week" element={<Review />} />
                     <Route path="coach" element={<Screening />} />
                     <Route path="coach/research" element={<Research />} />
                     <Route path="coach/plan" element={<CoachPlan />} />
@@ -91,6 +94,7 @@ export default function App() {
                     <Route path="wellbeing/:date" element={<WellbeingDetail />} />
                     <Route path="wellbeing/:date/edit" element={<WellbeingForm />} />
                     <Route path="maxes" element={<Maxes />} />
+                    <Route path="markers" element={<Markers />} />
                     <Route path="strava" element={<StravaPage />} />
                   </Route>
                   <Route path="library">

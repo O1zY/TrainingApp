@@ -15,6 +15,7 @@ import type { Block, CoachNotes, WeekKind } from '../../plan/types'
 import { useSettings } from '../../settings/SettingsContext'
 import { DayRow, KindPill, type DayInfo } from './bits'
 import { NoteRow, Warning } from './coach/parts'
+import { ReviewDueCard, WeekReviewLine } from './ReviewCards'
 
 /** The block as a row of bars: height is planned volume, colour is the week's phase. */
 function BlockWave({ weeks, selected, onPick }: { weeks: PlanWeek[]; selected: string; onPick: (start: string) => void }) {
@@ -93,6 +94,7 @@ export default function PlanHome() {
   const replan = useReplan()
   const [params, setParams] = useSearchParams()
   const [message, setMessage] = useState<string>()
+  const reviewed = params.get('reviewed') === '1'
   const today = todayIso()
 
   const block =
@@ -104,7 +106,11 @@ export default function PlanHome() {
   const thisWeek = weekStart(today, settings.weekStartsOn)
   const start = params.get('week') ?? (weeks.some((w) => w.start === thisWeek) ? thisWeek : (weeks[0]?.start ?? thisWeek))
   const week = weeks.find((w) => w.start === start)
-  const go = (s: string) => setParams((p) => ({ ...Object.fromEntries(p), week: s }), { replace: true })
+  const go = (s: string) =>
+    setParams((p) => {
+      const { reviewed: _done, ...rest } = Object.fromEntries(p)
+      return { ...rest, week: s }
+    }, { replace: true })
 
   const nextRace = events.find((e) => e.kind === 'race' && e.date >= today)
 
@@ -198,6 +204,8 @@ export default function PlanHome() {
       />
 
       <div className="space-y-5">
+        {reviewed && <p className="rounded-xl bg-hit/10 px-4 py-3 text-sm">Review saved. {block.weekAdjust?.[start] || block.weekKinds?.[start] ? 'This week has been re-planned with the changes you accepted.' : 'The plan carries on as it is.'}</p>}
+        <ReviewDueCard />
         <Card
           title={block.goal ? `Block · ${block.goal}` : 'Block'}
           action={
@@ -241,6 +249,7 @@ export default function PlanHome() {
                 </div>
                 {week && <WeekKindPicker block={block} week={week} />}
               </div>
+              <WeekReviewLine start={start} />
               {week && (
                 <p className="mb-2 text-sm text-muted">
                   {kindDef(week.kind).hint} · volume {Math.round(week.volume * 100)}%{week.notes.length ? ` · ${week.notes.join(' · ')}` : ''}

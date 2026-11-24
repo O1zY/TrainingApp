@@ -1,7 +1,7 @@
 import { createContext, useContext, type ReactNode } from 'react'
 import { KEYS, useStoredState, withArrays } from '../storage'
 import { newId } from './format'
-import type { Multisport, OneRepMax, Session, Wellbeing, Workout } from './types'
+import type { Marker, Multisport, OneRepMax, Session, Wellbeing, Workout } from './types'
 
 interface LogData {
   sessions: Session[]
@@ -9,15 +9,18 @@ interface LogData {
   wellbeing: Wellbeing[]
   maxes: OneRepMax[]
   workouts: Workout[]
+  /** Fitness markers (threshold pace, FTP, 2k, CSS, HR), every value kept. */
+  markers: Marker[]
 }
 
-const EMPTY: LogData = { sessions: [], multisport: [], wellbeing: [], maxes: [], workouts: [] }
+const EMPTY: LogData = { sessions: [], multisport: [], wellbeing: [], maxes: [], workouts: [], markers: [] }
 
 // Training data lives in localStorage (via src/storage.ts) until the Supabase section.
 // This is the only store that touches the log, so swapping the backend only changes here.
 const parseLog = (saved: Record<string, unknown>): LogData => withArrays(EMPTY, saved)
 
 export type SessionDraft = Omit<Session, 'id' | 'createdAt' | 'updatedAt'> & { id?: string; createdAt?: string }
+export type MarkerDraft = Omit<Marker, 'id' | 'createdAt' | 'updatedAt'> & { id?: string; createdAt?: string }
 export type WorkoutDraft = Omit<Workout, 'id' | 'createdAt' | 'updatedAt'> & { id?: string; createdAt?: string }
 
 interface LogValue extends LogData {
@@ -33,6 +36,8 @@ interface LogValue extends LogData {
   saveWorkout: (draft: WorkoutDraft) => Workout
   /** Sessions logged from it keep their data; only the link is dropped. */
   deleteWorkout: (id: string) => void
+  saveMarker: (draft: MarkerDraft) => Marker
+  deleteMarker: (id: string) => void
 }
 
 const LogContext = createContext<LogValue | null>(null)
@@ -124,6 +129,17 @@ export function LogProvider({ children }: { children: ReactNode }) {
         workouts: d.workouts.filter((w) => w.id !== id),
         sessions: d.sessions.map((s) => (s.workoutId === id ? { ...s, workoutId: undefined } : s)),
       }))
+    },
+
+    saveMarker(draft) {
+      const now = stamp()
+      const marker: Marker = { ...draft, id: draft.id ?? newId(), createdAt: draft.createdAt ?? now, updatedAt: now }
+      setData((d) => ({ ...d, markers: upsert(d.markers, marker, (m) => m.id === marker.id) }))
+      return marker
+    },
+
+    deleteMarker(id) {
+      setData((d) => ({ ...d, markers: d.markers.filter((m) => m.id !== id) }))
     },
   }
 

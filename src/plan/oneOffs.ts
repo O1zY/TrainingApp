@@ -163,6 +163,52 @@ const SEC_PER_M: Partial<Record<Sport, number>> = { erg: 0.22, row: 0.24, run: 0
 /** Warm-up and cool-down around interval sessions. */
 const WARM_SEC = min(25)
 
+/**
+ * Built-in tests the deload check-in uses when the library has none for the sport. Each one
+ * gives a fitness marker when logged (see src/markers/estimate.ts).
+ */
+const TESTS: Partial<Record<Sport, Spec>> = {
+  run: {
+    name: '30′ run test',
+    type: 'test',
+    rpe: 9,
+    description: 'Warm up 15′ with a few strides. Run 30′ alone, as hard as you can hold evenly. Your threshold pace is the average pace of the whole 30′.',
+    reps: [{ n: 1, durationSec: min(30) }],
+  },
+  bike: {
+    name: '20′ FTP test',
+    type: 'test',
+    rpe: 9,
+    description: 'Warm up 20′ including 3 short spin-ups and one hard 5′, then 10′ easy. Ride 20′ as hard as you can hold evenly. FTP is 95% of the 20′ average power.',
+    reps: [{ n: 1, durationSec: min(20) }],
+  },
+  erg: {
+    name: '2k test',
+    type: 'test',
+    rpe: 10,
+    description: 'Warm up 15–20′ with a few short bursts at race rate. Then 2,000m flat out.',
+    reps: [{ n: 1, distanceM: 2000 }],
+  },
+  swim: {
+    name: 'CSS test (400 + 200)',
+    type: 'test',
+    rpe: 9,
+    description: 'Warm up 10′. Swim 400m flat out, then 5–10′ easy, then 200m flat out. CSS per 100m is (400 time − 200 time) ÷ 2.',
+    reps: [
+      { n: 1, distanceM: 400, restSec: min(8) },
+      { n: 1, distanceM: 200 },
+    ],
+  },
+}
+
+/** A built-in test for the sport, ready to plan, or undefined if there isn't one. */
+export function testOneOff(sport: Sport): OneOff | undefined {
+  const spec = TESTS[sport]
+  if (!spec) return undefined
+  const o = buildOneOff(sport, spec, 0, 1)
+  return { ...o, tags: ['test'] }
+}
+
 export function specsFor(sport: Sport, intensity: Exclude<Intensity, 'race'>) {
   const list = BANK[sport]?.[intensity]
   return list?.length ? list : GENERIC[intensity]

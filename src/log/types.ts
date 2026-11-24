@@ -21,8 +21,20 @@ export interface Target {
 }
 
 /** What a rep or session was meant to be. Shared by logged sessions and library workouts. */
+/**
+ * A target relative to the sport's fitness marker, resolved to real numbers when the
+ * session is planned or logged: % of FTP on the bike; seconds added to threshold pace
+ * (run, /km), to the 2k split (erg, /500m) or to CSS (swim, /100m). Negative is faster.
+ */
+export interface RelTarget {
+  lo?: number
+  hi?: number
+}
+
 export interface Aim {
   target?: Target
+  /** Relative to the sport's fitness marker; used when there's no fixed `target`. */
+  rel?: RelTarget
   /** Heart-rate zone 1–5, checked against the zones in Settings. */
   hrZone?: number
   /** Stroke rate or cadence to hold. Shown alongside the actual, not graded. */
@@ -152,6 +164,31 @@ export interface Wellbeing {
   illness?: boolean
   injury?: string
   notes?: string
+  updatedAt: string
+}
+
+// ---- Fitness markers ---------------------------------------------------------
+
+/** Threshold numbers per sport that zones and targets are worked out from. */
+export type MarkerKind = 'runThreshold' | 'ftp' | 'erg2k' | 'css' | 'maxHr' | 'restHr'
+
+export type MarkerSource = 'test' | 'race' | 'estimate' | 'manual'
+
+/**
+ * One measured value. Kept as a history (one record per test), the latest being current.
+ * Base units: run threshold and CSS in s/km, FTP in watts, 2k as total seconds, HR in bpm.
+ */
+export interface Marker {
+  id: string
+  kind: MarkerKind
+  value: number
+  /** YYYY-MM-DD the value was measured. */
+  date: string
+  source: MarkerSource
+  /** Logged session it came from. */
+  sessionId?: string
+  notes?: string
+  createdAt: string
   updatedAt: string
 }
 

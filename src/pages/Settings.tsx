@@ -1,4 +1,8 @@
 import type { ReactNode } from 'react'
+import { Link } from 'react-router-dom'
+import { ParsedInput } from '../components/fields'
+import { SPORTS } from '../log/sports'
+import { ZONE_SPORTS, ZONE_TABLES, bandsFor, type ZoneBand, type ZoneSport } from '../markers/zones'
 import { Card, PageHeader, Segmented } from '../components/ui'
 import { StravaConnection } from './log/Strava'
 import { DataCard } from './DataCard'
@@ -78,7 +82,7 @@ export default function Settings() {
 
         <Card title="Heart rate zones">
           <div className="divide-y divide-line">
-            <Row label="Max heart rate" hint="Used to suggest zones. Edit the zones directly if you've had them tested.">
+            <Row label="Max heart rate" hint="Used to suggest zones. Saving a max HR fitness marker updates it. Edit the zones directly if you've had them tested.">
               <div className="flex items-center gap-2">
                 <BpmInput value={settings.maxHR} onChange={(maxHR) => update({ maxHR })} />
                 <button
@@ -112,6 +116,10 @@ export default function Settings() {
           </div>
         </Card>
 
+        <div id="zones" className="scroll-mt-20">
+          <ZonesSettings />
+        </div>
+
         <Card title="Strava">
           <StravaConnection />
         </Card>
@@ -120,5 +128,83 @@ export default function Settings() {
         <DataCard />
       </div>
     </>
+  )
+}
+
+/** A zone bound: blank means open-ended. Signed for the erg's seconds either side of the 2k split. */
+function BandInput({ value, onChange, label }: { value: number | null; onChange: (v: number | null) => void; label: string }) {
+  return (
+    <ParsedInput<number>
+      aria-label={label}
+      value={value ?? undefined}
+      placeholder="—"
+      className="tabular w-14! px-1! text-center"
+      format={(v) => String(v)}
+      parse={(t) => {
+        const n = Number(t.trim().replace('−', '-'))
+        return t.trim() && Number.isFinite(n) ? n : undefined
+      }}
+      onChange={(v) => onChange(v ?? null)}
+    />
+  )
+}
+
+function ZonesSettings() {
+  const { settings, update } = useSettings()
+  const setBands = (sport: ZoneSport, bands: ZoneBand[] | undefined) => {
+    const zones = { ...settings.zones }
+    if (bands) zones[sport] = bands
+    else delete zones[sport]
+    update({ zones: Object.keys(zones).length ? zones : undefined })
+  }
+  return (
+    <Card title="Pace and power zones">
+      <p className="text-sm text-muted">
+        Worked out from your <Link to="/log/markers" className="font-medium text-accent-strong">fitness markers</Link>, so a session aimed at a zone shows the pace or watts to hold.
+        Blank means open-ended. The defaults are coaching conventions, named under each table.
+      </p>
+      <div className="mt-4 divide-y divide-line">
+        <Row label="Re-test every" hint="Markers older than this are flagged as due a re-test.">
+          <Segmented<string>
+            value={String(settings.retestWeeks)}
+            onChange={(v) => update({ retestWeeks: Number(v) })}
+            options={[4, 6, 8, 12].map((w) => ({ value: String(w), label: `${w} wk` }))}
+          />
+        </Row>
+        {ZONE_SPORTS.map((sport) => {
+          const t = ZONE_TABLES[sport]
+          const bands = bandsFor(sport, settings.zones)
+          const edited = !!settings.zones?.[sport]
+          return (
+            <div key={sport} className="py-4 last:pb-0">
+              <div className="flex items-baseline justify-between gap-2">
+                <p className="font-medium">{SPORTS[sport].label}</p>
+                {edited && (
+                  <button type="button" onClick={() => setBands(sport, undefined)} className="text-sm font-medium text-accent-strong">
+                    Reset
+                  </button>
+                )}
+              </div>
+              <p className="text-xs text-muted">{t.unit}</p>
+              <div className="mt-2 grid grid-cols-5 gap-1.5 text-center">
+                {bands.map(([lo, hi], i) => (
+                  <div key={i} className="rounded-lg bg-surface-2 px-1 py-2">
+                    <p className="text-xs font-semibold">Z{i + 1}</p>
+                    <p className="truncate text-[11px] text-muted" title={t.names[i]}>
+                      {t.names[i]}
+                    </p>
+                    <div className="mt-1 flex flex-col items-center gap-1">
+                      <BandInput label={`${SPORTS[sport].label} zone ${i + 1} from`} value={lo} onChange={(v) => setBands(sport, bands.map((b, j) => (j === i ? [v, b[1]] : b)))} />
+                      <BandInput label={`${SPORTS[sport].label} zone ${i + 1} to`} value={hi} onChange={(v) => setBands(sport, bands.map((b, j) => (j === i ? [b[0], v] : b)))} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-1.5 text-xs text-muted">Default: {t.source}</p>
+            </div>
+          )
+        })}
+      </div>
+    </Card>
   )
 }

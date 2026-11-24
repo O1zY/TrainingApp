@@ -26,6 +26,7 @@ import type { Session } from '../../log/types'
 import { useSettings } from '../../settings/SettingsContext'
 import { ViewOnStrava } from './Strava'
 import { WellbeingSummary } from './Wellbeing'
+import { MarkerSuggestions } from './Markers'
 
 export function Stat({ label, value, unit, sub }: { label: string; value: ReactNode; unit?: string; sub?: string }) {
   return (
@@ -346,6 +347,7 @@ export default function SessionDetail() {
         </Link>
       )}
 
+      <MarkerSuggestions session={s} title="New fitness marker?" />
       <SessionStats s={s} />
       <AimResult s={s} />
 

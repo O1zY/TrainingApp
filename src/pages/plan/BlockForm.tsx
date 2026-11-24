@@ -17,6 +17,7 @@ import { usePlan, type BlockDraft } from '../../plan/PlanStore'
 import type { BlockSport } from '../../plan/types'
 import { useSettings } from '../../settings/SettingsContext'
 import { WorkdayFields } from './bits'
+import { useZoneContext } from '../../markers/useZones'
 
 const PLAN_SPORTS: Sport[] = ['erg', 'row', 'run', 'bike', 'swim', 'strength', 'recovery']
 
@@ -88,6 +89,7 @@ function Form({ initial, editing }: { initial: BlockDraft; editing: boolean }) {
   const [workday, setWorkday] = useState({ commuteMin: prefs.commuteMin, gapMin: prefs.gapMin })
   const { workouts, sessions } = useLog()
   const { settings } = useSettings()
+  const zones = useZoneContext()
   const replan = useReplan()
   const navigate = useNavigate()
   const [draft, setDraft] = useState(initial)
@@ -264,7 +266,7 @@ function Form({ initial, editing }: { initial: BlockDraft; editing: boolean }) {
                         <def.icon className={`size-4 shrink-0 ${def.text}`} />
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-sm font-medium">{w.name}</span>
-                          <span className="block truncate text-xs text-muted">{structureSummary(w, settings.units)}</span>
+                          <span className="block truncate text-xs text-muted">{structureSummary(w, settings.units, zones)}</span>
                         </span>
                         <span className="shrink-0 text-xs text-muted">{isTest(w) ? 'Test' : workoutIntensity(w) === 'key' ? 'Hard' : workoutIntensity(w) === 'easy' ? 'Easy' : 'Steady-hard'}</span>
                         {on && <Repeat className="size-4 shrink-0 text-accent-strong" />}
