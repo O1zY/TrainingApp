@@ -1,7 +1,8 @@
-import { Briefcase, CalendarRange, ChevronLeft, ChevronRight, Flag, Pencil, Plus, RefreshCw } from 'lucide-react'
+import { Briefcase, CalendarRange, ChevronLeft, ChevronRight, ClipboardCheck, Flag, Pencil, Plus, RefreshCw, Sparkles } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Card, EmptyState, PageHeader, StatTile } from '../../components/ui'
+import { allFlags, progress } from '../../coach/screening'
 import { formatDate, todayIso } from '../../log/format'
 import { useLog } from '../../log/LogStore'
 import { KIND_STYLE, WEEK_KINDS, blockWeeks, kindDef, weekLabel, type PlanWeek } from '../../plan/cycle'
@@ -10,9 +11,10 @@ import { covers, raceLabel } from '../../plan/events'
 import { dayLoad, weekWork } from '../../plan/load'
 import { blockEnd, loggedFor, useReplan } from '../../plan/planned'
 import { usePlan } from '../../plan/PlanStore'
-import type { Block, WeekKind } from '../../plan/types'
+import type { Block, CoachNotes, WeekKind } from '../../plan/types'
 import { useSettings } from '../../settings/SettingsContext'
 import { DayRow, KindPill, type DayInfo } from './bits'
+import { NoteRow, Warning } from './coach/parts'
 
 /** The block as a row of bars: height is planned volume, colour is the week's phase. */
 function BlockWave({ weeks, selected, onPick }: { weeks: PlanWeek[]; selected: string; onPick: (start: string) => void }) {
@@ -135,6 +137,8 @@ export default function PlanHome() {
       <Card title="Work & calendar" action={<Link to="/plan/work" className="text-sm font-medium text-accent-strong">Manage</Link>}>
         <WorkSummary />
       </Card>
+      <CoachCard />
+      {block?.coach && <CoachNotesCard notes={block.coach} />}
     </>
   )
 
@@ -272,6 +276,77 @@ export default function PlanHome() {
         </div>
       </div>
     </>
+  )
+}
+
+/** Why the coach built this block the way it did, folded away until wanted. */
+function CoachNotesCard({ notes }: { notes: CoachNotes }) {
+  return (
+    <Card title="Why this plan">
+      {notes.warnings.length > 0 && (
+        <div className="mb-3 space-y-2">
+          {notes.warnings.map((w) => (
+            <Warning key={w} text={w} />
+          ))}
+        </div>
+      )}
+      <details>
+        <summary className="cursor-pointer text-sm font-medium text-accent-strong">
+          {notes.notes.length} choices from the coach, {formatDate(notes.at.slice(0, 10))}
+        </summary>
+        <ul className="mt-3 divide-y divide-line">
+          {notes.notes.map((n) => (
+            <NoteRow key={n.area + n.text} note={n} />
+          ))}
+        </ul>
+      </details>
+    </Card>
+  )
+}
+
+/** Progress through the coach screening, the first step towards a coach-built plan. */
+function CoachCard() {
+  const { profile, events } = usePlan()
+  const today = todayIso()
+  const p = profile ? progress(profile, events, today) : undefined
+  const stops = profile ? allFlags(profile).filter((f) => f.level === 'stop').length : 0
+  return (
+    <Card
+      title="Coach"
+      action={
+        <span className="flex gap-3">
+          <Link to="/plan/coach/research" className="text-sm font-medium text-accent-strong">
+            Research
+          </Link>
+          <Link to="/plan/coach" className="text-sm font-medium text-accent-strong">
+            {p ? 'Open' : 'Start'}
+          </Link>
+        </span>
+      }
+    >
+      <Link to="/plan/coach" className="flex items-center gap-3">
+        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent-strong">
+          <ClipboardCheck className="size-5" />
+        </span>
+        <span className="min-w-0 text-sm">
+          <span className="block font-semibold">Screening {p ? `${p.done} of ${p.total} done` : 'not started'}</span>
+          <span className="block text-muted">
+            {!p
+              ? 'Goal race, health, injuries, history and time to train: what the coach needs before building a plan.'
+              : stops
+                ? `${stops} thing${stops === 1 ? '' : 's'} to check with a professional first.`
+                : p.complete
+                  ? 'Ready: the coach can build your plan.'
+                  : 'Finish it so the coach can build your plan.'}
+          </span>
+        </span>
+      </Link>
+      {p?.complete && (
+        <Link to="/plan/coach/plan" className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-on-accent hover:opacity-90">
+          <Sparkles className="size-4" /> Build my plan
+        </Link>
+      )}
+    </Card>
   )
 }
 

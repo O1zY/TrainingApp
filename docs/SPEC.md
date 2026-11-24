@@ -30,6 +30,11 @@ part training tool (plan programmes, reuse sessions, analyse progress) across ev
 8. **Wellbeing vs load** ✅ — which check-in scores move with training load (Analysis)
 9. **Planned sessions → Google Calendar** ✅ — write the plan out to a calendar of its own
 10. **Sync across devices** ✅ — one copy of the data in a database, shared by phone and laptop
+11. **AI coach: research-led plan builder** (in progress) — pre-plan screening, then a researched, cited block that the existing planner schedules around work
+    - 11a **Screening and athlete profile** ✅
+    - 11b **Duathlon/triathlon research library** ✅
+    - 11c Coach engine and proposal screen (parked 24 Nov 2026: needs a paid Anthropic API key)
+    - 11d **Rule-based coach** ✅ (no AI, no running cost): builds the block from the screening and the research library
 
 ## Session logging decisions (agreed 23 Oct 2026)
 
@@ -160,6 +165,62 @@ rep drift. HR zones live in Settings (max HR, editable zone tops, default 60/70/
 | When | On opening, 3s after any change, on coming back into view (if 30s+ since the last), on going back online, and every 5 min while visible. One tab at a time via Web Locks. Status and errors in Settings › Sync across devices |
 | Backups | Still offered. A restore while signed in replaces the account's copy too (said in the confirm), since the restored data is newer than the base |
 | Not yet | Realtime push from the server (changes arrive on the next sync instead), deleting the account's data from inside the app (delete the rows or the user in Supabase) |
+
+## AI coach: research-led plan builder (proposed 12 Nov 2026, not yet agreed)
+
+| Topic | Proposal |
+|---|---|
+| First job | Build the whole plan. Later jobs (weekly review, chat, session feedback) reuse the same pieces |
+| Screening | A short pre-plan questionnaire, filled from the app's data first so nothing is asked twice: goal race (date, format, distances, priority, target), training history (last 12 weeks of logs and Strava: hours/week per sport, longest sessions, recent PBs, load and form), days and times free (from shifts, events and Plan › Work), injuries and niggles (what, where, how long, what aggravates it, cleared by a physio or not), equipment and access (turbo, pool, gym, open water), experience in the event, and hard limits (most hours a week, days off). Saved as an athlete profile that later plans and reviews reuse |
+| Division of labour | The coach doesn't schedule sessions itself. It decides what the existing planner can't: the block's shape (weeks, cycle, build and deload %, sport mix, sessions and key sessions per sport, easy lengths, most training days, doubles), race-specific sessions (bricks, race-pace run–bike–run, transition practice) written as library workouts or one-offs, and changes to the load heuristics. `src/plan/generate.ts` then places everything around work and events as it does now |
+| Evidence | Two layers. (1) A curated library in the repo: each entry holds the claim, the numbers to use, the population it was tested on, the citation with its DOI, and an evidence grade (meta-analysis, RCT, observational, expert consensus). (2) Live search of papers for anything the library doesn't cover, shown as "found by search, not vetted". Every decision in a proposal names its source; anything without one is labelled the coach's judgement |
+| First disciplines | Duathlon and triathlon (sprint to standard): run–bike–run and swim–bike–run structure, brick sessions, intensity distribution, taper, run-off-the-bike pacing. Rowing, running and strength follow as library entries are added |
+| Injuries | The coach adapts around a niggle (less impact, cross-training, slower run build-up) but never diagnoses. A red-flag answer (sharp or worsening pain, pain at rest, not seen by anyone) shows "see a physio first" and leaves out the affected work until it's cleared |
+| Output | A proposal, never a silent change: the block settings, sessions and heuristic changes, each with a one-line reason and its citation. Accept all, accept some, or ask for changes, then the planner runs. The proposal is kept with the block so the reasoning stays visible later |
+| Engine | Claude through a server function, like the Strava token exchange, so the API key (`ANTHROPIC_API_KEY`) never reaches the browser. Structured output checked against the Block/Workout types before anything is shown. Plan-building runs long (research plus reasoning), so it needs a background or streaming function rather than Netlify's default short timeout; to be settled when building |
+| Data sent | A summary the app computes (weekly totals, load, PBs, check-in averages, shift pattern, screening answers), not the raw log. Said plainly in Settings before first use |
+| Cost | Pay-as-you-go Anthropic API key, separate from any Claude subscription. Estimated well under £1 per plan built, to be measured |
+
+## Coach screening decisions (11a, 12 Nov 2026)
+
+| Topic | Decision |
+|---|---|
+| Where | Plan › Coach screening (`/plan/coach`), with a Coach card on Plan showing progress and anything flagged |
+| Storage | `profile` inside `tt-plan-v1`, so sync and backups carry it with no extra wiring. Injuries are a list keyed by `id`, so one added on each device both survive a merge. `src/coach/profile.ts` keeps saved shapes safe |
+| Sections | Goal race (a race from Races & events, format presets that fill the leg distances, aim, target time, experience) · Health check (the PAR-Q+ style questions plus recent illness) · Injuries & niggles · Training history · Time to train (incl. other sport to keep up, e.g. rowing twice a week) · Kit & facilities. Each says what's still missing; the coach needs all six done |
+| From the data | Training history is worked out, not asked: the last 12 whole weeks of the log (hours, days, per-sport sessions, distance and longest, multisport count, fitness/fatigue/form, check-in averages, niggle tags and injury notes). The work pattern comes from the next 4 weeks of shifts, or the last 4 if none are added. Logic `src/coach/history.ts` |
+| Flags | Any health yes → see a GP before intensity. An injury with pain at rest, at night, getting worse, other symptoms or training pain above 5/10 (after the pain-monitoring model, Silbernagel et al. 2007), or painful and not looked at, → see a physio first, and what sets it off is kept out of plans until cleared. Otherwise the coach plans around it. Logic `src/coach/screening.ts` |
+| Not yet | Nothing is sent anywhere: the coach that reads the profile is 11c |
+
+## Research library decisions (11b, 24 Nov 2026)
+
+| Topic | Decision |
+|---|---|
+| Where | `src/coach/evidence/`: `sources.ts` (the studies), `findings.ts` (what the coach may plan from), `index.ts` (look-ups and relevance). Browsable on Plan › Coach › Research (`/plan/coach/research`), "For you" or all |
+| Sources | 35 papers, each found in the paper index (PubMed/PMC) and its authors, year, journal, DOI and PubMed id checked, with the finding restated from its abstract (publisher or PubMed page). Volume/pages only where seen. Nothing added from memory alone |
+| Findings | 17, each with a plain summary, guidance with numbers, caveats, an evidence strength and which part of the plan it shapes. Where a number is coaching convention rather than a study result (sets and reps, brick length, the 10% run rule), the caveat says so. Counter-evidence is kept in (e.g. threshold training matching polarised in recreational runners; block periodisation's conflicting trials) |
+| Topics | Intensity mix, long intervals, taper, bricks, bike pacing, cadence, first km off the bike, duathlon pacing, heavy strength, lifting order, run progression, the acute:chronic ratio (information only), pain monitoring, sleep, HRV-guided days, block periodisation, planning around work |
+| Strength rules (tested) | Strong needs a meta-analysis or systematic review among its sources; moderate needs a trial or review; every source is cited and every citation exists |
+| Relevance | From the screening: duathlon or triathlon, running, an injury, lifting or gym access, HRV in recent check-ins, work shifts, an A race. Each relevant finding says why it applies |
+| Gaps | Swimming technique and open-water skills, heat, nutrition, rowing, running and strength as main goals: to be added, or answered by live paper search in 11c (marked not vetted) |
+
+## Rule-based coach decisions (11d, 24 Nov 2026)
+
+| Topic | Decision |
+|---|---|
+| Why | 11c (Claude) parked to avoid API costs. The same job done by fixed, tested rules: `src/coach/rules.ts` turns the profile, the goal race, training history and work pattern into a block for the existing planner, which still places every session around shifts and events |
+| Where | Plan › Coach › Build my plan (`/plan/coach/plan`), from the screening once it's saved and complete, or the Coach card on Plan. Shows the block (weeks, volume, sessions per sport), the bricks it adds, and every choice with its research findings (linked to Research) or marked "Coach's judgement". Nothing is saved until "Create this block"; an overlapping block can be replaced (logged sessions stay) |
+| Length | From next week to the race week, plus a recovery week for an A race. Over 20 weeks away: a 12-week base block, with a note to run the coach again later. Under 3 weeks: a warning |
+| Rhythm | 3:1, or 2:1 when newer to training (under 2 years), carrying a niggle, or recently ill (judgement). Build weeks +8% (+5% in those cases or with no running logged); deloads at 60% |
+| Volume | Starts from recent training (×1.05), never cutting the race sports below what's already done to fit new strength or kept sessions; 60% of the limit with nothing logged. Grows each cycle (new `cycleGrowthPct` block setting, up to 10%, 5% with a niggle, illness or under 2 years) as far as the biggest real week stays inside the hours limit |
+| Sports | Duathlon run 40 / bike 60; triathlon swim 20 / bike 50 / run 30. Running first keeps its current time (up to half the week) and other sports share the rest, so extra volume lands on the bike. Sports blocked by an injury flagged "see a physio" are left out (cross-training instead). Kept sports (e.g. rowing) all easy. Strength twice a week with gym access (once under 4h a week), one heavy |
+| Sessions | Counts suit a mid-block week, with easy sessions no shorter than run 25′, bike 40′, swim 25′ there; lengths are set for week 1 and grow with volume. A long session only when it's at least 45′ run / 60′ bike from week 1 and fits a day off |
+| Hard sessions | 2 a week across all sports under 6h, otherwise 3, ordered bike (brick), run, then run (duathlon) or swim (triathlon); none after a health "yes"; no running speed work with a hills/speed-aggravated niggle |
+| Bricks | Three library workouts (tagged `brick`, `coach`), set as the block's benchmarks so the hard bike session of build weeks 1–3 is a brick, repeated each cycle: 45′ bike + 10′ run; 3 × (10′ bike + 5′ run); a race simulation sized from the goal legs. Re-running reuses them rather than adding copies |
+| Taper | Sprint/super sprint or a race under 3 weeks away: the planner's one-week taper. Longer A races: two weeks (the extra week set as a taper by hand). B races: a lighter race week |
+| Stored | The decisions and warnings are kept on the block (`coach`) and shown on Plan as "Why this plan" |
+| Planner change | `useReplan` takes new workouts directly, so a block can be planned with bricks saved in the same moment |
+| Not yet | Automatic HRV-based swaps (stated as a by-hand rule); a long session that switches on later in the block; per-sport progression |
 
 ## Parked for later (noted 23 Oct 2026)
 

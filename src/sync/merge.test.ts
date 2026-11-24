@@ -71,3 +71,17 @@ describe('mergeStores without a base (joining an account)', () => {
     })
   })
 })
+
+describe('mergeStores with the coach profile', () => {
+  const profile = { goal: { eventId: 'r', legs: [{ sport: 'run', distanceM: 5000 }] }, health: {}, injuries: [s('knee')], availability: { daysPerWeek: 5 }, updatedAt: '2026-11-01T10:00:00Z' }
+  const base = { blocks: [], profile }
+
+  it('keeps an injury added on each device and answers changed on either', () => {
+    const local = { ...base, profile: { ...profile, injuries: [...profile.injuries, s('calf')], availability: { daysPerWeek: 6 } } }
+    const remote = { ...base, profile: { ...profile, injuries: [...profile.injuries, s('hip')], health: { heart: false } } }
+    const merged = mergeStores(base, local, remote).profile as typeof profile
+    expect(merged.injuries.map((i) => i.id)).toEqual(['knee', 'calf', 'hip'])
+    expect(merged.availability).toEqual({ daysPerWeek: 6 })
+    expect(merged.health).toEqual({ heart: false })
+  })
+})

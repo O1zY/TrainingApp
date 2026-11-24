@@ -1,6 +1,8 @@
 import { createContext, useContext, type ReactNode } from 'react'
 import { KEYS, useStoredState, withArrays } from '../storage'
 import { newId } from '../log/format'
+import { parseProfile } from '../coach/profile'
+import type { AthleteProfile } from '../coach/types'
 import { DEFAULT_PREFS, byDate, mergeImported } from './data'
 import type { Block, Commitment, PlanEvent, PlanPrefs, PlannedSession } from './types'
 
@@ -10,6 +12,8 @@ interface PlanData {
   events: PlanEvent[]
   commitments: Commitment[]
   prefs: PlanPrefs
+  /** Coach screening answers (section 11). Missing until the screening is first saved. */
+  profile?: AthleteProfile
 }
 
 const EMPTY: PlanData = { blocks: [], planned: [], events: [], commitments: [], prefs: DEFAULT_PREFS }
@@ -18,7 +22,7 @@ const EMPTY: PlanData = { blocks: [], planned: [], events: [], commitments: [], 
 // this is the only store that touches it.
 function parsePlan(saved: Record<string, unknown>): PlanData {
   const prefs = saved.prefs && typeof saved.prefs === 'object' ? saved.prefs : {}
-  return { ...withArrays(EMPTY, saved), prefs: { ...DEFAULT_PREFS, ...prefs } }
+  return { ...withArrays(EMPTY, saved), prefs: { ...DEFAULT_PREFS, ...prefs }, profile: parseProfile(saved.profile) }
 }
 
 export type BlockDraft = Omit<Block, 'id' | 'createdAt' | 'updatedAt'> & { id?: string; createdAt?: string }
@@ -40,6 +44,7 @@ interface PlanValue extends PlanData {
   /** Replaces imported commitments from one source within a date range (a re-sync), keeping work/demand set by hand. */
   replaceImported: (source: Commitment['source'], from: string, to: string, list: Omit<Commitment, 'id'>[]) => void
   updatePrefs: (patch: Partial<PlanPrefs>) => void
+  saveProfile: (profile: Omit<AthleteProfile, 'updatedAt'>) => void
 }
 
 const PlanContext = createContext<PlanValue | null>(null)
@@ -120,6 +125,10 @@ export function PlanProvider({ children }: { children: ReactNode }) {
 
     updatePrefs(patch) {
       setData((d) => ({ ...d, prefs: { ...d.prefs, ...patch } }))
+    },
+
+    saveProfile(profile) {
+      setData((d) => ({ ...d, profile: { ...profile, updatedAt: stamp() } }))
     },
   }
 

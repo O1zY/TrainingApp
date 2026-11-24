@@ -24,6 +24,21 @@ export interface BlockSport {
   long: boolean
 }
 
+/** One reason the coach gave for a block (see src/coach/rules.ts). */
+export interface CoachNote {
+  area: string
+  text: string
+  /** Research finding ids. */
+  findings: string[]
+  judgement?: boolean
+}
+
+export interface CoachNotes {
+  at: string
+  notes: CoachNote[]
+  warnings: string[]
+}
+
 export interface Block {
   id: string
   name: string
@@ -37,6 +52,11 @@ export interface Block {
   progressionPct: number
   /** Deload volume as a % of the first build week. */
   deloadPct: number
+  /**
+   * Volume added each cycle, as a %: 5 makes every week of the second cycle 5% bigger
+   * than the same week of the first. Missing or 0 repeats the same cycle.
+   */
+  cycleGrowthPct?: number
   sports: BlockSport[]
   /** Most days a week with training on them (recovery work doesn't count). */
   maxDays: number
@@ -50,6 +70,8 @@ export interface Block {
   libraryMix: number
   /** Hand-set week kinds, keyed by week start date. */
   weekKinds?: Record<string, WeekKind>
+  /** Set when the coach built this block: why each choice was made, and from which research. */
+  coach?: CoachNotes
   createdAt: string
   updatedAt: string
 }
