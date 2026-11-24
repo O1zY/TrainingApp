@@ -176,7 +176,7 @@ export default function Screening() {
               </FieldGroup>
             )}
             {goal.legs.length > 0 && (
-              <div className="grid gap-3 sm:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 {goal.legs.map((leg, i) => {
                   const unit = distanceUnit(leg.sport, settings.units)
                   return (
@@ -193,7 +193,7 @@ export default function Screening() {
               </div>
             )}
             <FieldGroup label="Aiming to">{pick(goal.aim, AIMS, (aim) => setGoal({ aim }))}</FieldGroup>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field label="Target time (optional)">
                 <TimeInput value={goal.targetSec} onChange={(targetSec) => setGoal({ targetSec })} placeholder="h:mm:ss" />
               </Field>
@@ -253,7 +253,7 @@ export default function Screening() {
         <Section title={title('history')} summary={summary('history')} defaultOpen={firstOpen === 'history'}>
           <div className="space-y-4">
             <HistorySummary h={history} />
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field label="Years of regular endurance training">
                 <NumberInput value={draft.trainingYears} onChange={(trainingYears) => patch({ trainingYears })} decimals={1} />
               </Field>
@@ -281,7 +281,7 @@ export default function Screening() {
                 ))}
               </div>
             </FieldGroup>
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <Field label="Most hours a week">
                 <NumberInput value={av.hoursPerWeek} onChange={(hoursPerWeek) => setAv({ hoursPerWeek })} decimals={1} />
               </Field>

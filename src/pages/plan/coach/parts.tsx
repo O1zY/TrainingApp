@@ -75,7 +75,7 @@ export function InjuryEditor({ injury, onChange, onRemove }: { injury: Injury; o
           <Trash2 className="size-4" /> Remove
         </button>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Field label="Where">
           <select className={inputClass} value={injury.area} onChange={(e) => patch({ area: e.target.value as BodyArea })}>
             {AREAS.map((a) => (
@@ -98,7 +98,7 @@ export function InjuryEditor({ injury, onChange, onRemove }: { injury: Injury; o
       <Field label="What it is or feels like">
         <TextInput value={injury.description} onChange={(description) => patch({ description })} placeholder="e.g. Ache below the kneecap after long runs" />
       </Field>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <FieldGroup label="Now">
           <div className="flex flex-wrap gap-1.5">
             {STATUSES.map((s) => (

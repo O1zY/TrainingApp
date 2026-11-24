@@ -453,7 +453,7 @@ function PbSection() {
       )}
 
       {sport !== 'strength' && endurance.some((p) => sport === 'all' || p.sport === sport) && (
-        <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {endurance
             .filter((p) => sport === 'all' || p.sport === sport)
             .map((p) => {

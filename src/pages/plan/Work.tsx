@@ -67,8 +67,8 @@ function AddShift() {
             { value: 'busy', label: 'Other commitment' },
           ]}
         />
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Field label="Date" className="col-span-2 sm:col-span-1">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-2">
+          <Field label="Date" className="col-span-2 sm:col-span-1 md:col-span-2">
             <input type="date" required className={inputClass} value={date} onChange={(e) => setDate(e.target.value)} />
           </Field>
           <Field label="Start">
@@ -77,7 +77,7 @@ function AddShift() {
           <Field label="End" hint={end <= start ? 'Finishes the next morning' : undefined}>
             <input type="time" required className={inputClass} value={end} onChange={(e) => setEnd(e.target.value)} />
           </Field>
-          <Field label="Repeat weekly" unit="more weeks" className="col-span-2 sm:col-span-1">
+          <Field label="Repeat weekly" unit="more weeks" className="col-span-2 sm:col-span-1 md:col-span-2">
             <NumberInput integer value={repeat} onChange={(v) => setRepeat(Math.min(26, v ?? 0))} placeholder="0" />
           </Field>
         </div>
@@ -423,7 +423,7 @@ export default function Work() {
         title="Work & calendar"
         subtitle="Shifts and commitments the plan fits around. Hard sessions go on your lighter days, and easy ones get shortened or moved when a shift leaves no room."
       />
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <div className="space-y-5">
           <WorkingDay />
           <AddShift />

@@ -225,7 +225,7 @@ export default function PlannedDetail() {
       )}
 
       {p.intensity !== 'race' && (
-        <div className="grid gap-5 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
           {!done && <MoveCard key={`${p.date}${p.time}`} p={p} />}
           <SourceCard p={p} />
         </div>

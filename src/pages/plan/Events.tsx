@@ -205,7 +205,7 @@ export default function Events() {
       </Link>
       <PageHeader title="Races & events" subtitle="What the plan bends around: races by priority, time away, busy spells" action={addButton} />
       {events.length ? (
-        <div className="grid gap-5 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
           <Card title="Coming up">{upcoming.length ? <ul className="-mx-2">{upcoming.map(row)}</ul> : <p className="text-sm text-muted">Nothing ahead.</p>}</Card>
           {past.length > 0 && (
             <Card title="Past">

@@ -198,7 +198,7 @@ function Form({ initialEvent, initialLegs, editing }: { initialEvent: EventDraft
         </Field>
       </Card>
 
-      <div className="fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-10 border-t border-line bg-surface/95 px-4 py-3 backdrop-blur md:bottom-0 md:left-60">
+      <div className="fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-10 border-t border-line bg-surface/95 px-4 py-3 backdrop-blur md:bottom-0 md:left-64">
         <div className="mx-auto flex max-w-6xl items-center justify-end gap-2 md:px-4">
           <button type="button" onClick={() => navigate(-1)} className="rounded-lg border border-line px-4 py-2.5 text-sm font-semibold hover:bg-surface-2">
             Cancel
