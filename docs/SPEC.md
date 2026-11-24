@@ -33,7 +33,7 @@ part training tool (plan programmes, reuse sessions, analyse progress) across ev
 11. **AI coach: research-led plan builder** (in progress) — pre-plan screening, then a researched, cited block that the existing planner schedules around work
     - 11a **Screening and athlete profile** ✅
     - 11b **Duathlon/triathlon research library** ✅
-    - 11c Coach engine and proposal screen
+    - 11c Coach engine and proposal screen (parked 24 Nov 2026: needs a paid Anthropic API key)
 
 ## Session logging decisions (agreed 23 Oct 2026)
 
