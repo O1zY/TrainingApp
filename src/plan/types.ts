@@ -75,10 +75,24 @@ export interface Block {
   libraryMix: number
   /** Hand-set week kinds, keyed by week start date. */
   weekKinds?: Record<string, WeekKind>
+  /** Changes accepted from a weekly review, keyed by week start date. */
+  weekAdjust?: Record<string, WeekAdjust>
   /** Set when the coach built this block: why each choice was made, and from which research. */
   coach?: CoachNotes
   createdAt: string
   updatedAt: string
+}
+
+/** A change to one week of a block, from a weekly review. Changes to the same week combine. */
+export interface WeekAdjust {
+  /** The week's volume as a % of what the cycle gives it (100 = as planned). */
+  scale?: number
+  /** No hard sessions (and no test) this week. */
+  easyOnly?: boolean
+  /** Sports cut back this week: half the sessions, none of them hard. */
+  less?: Sport[]
+  /** Sports left out this week. */
+  drop?: Sport[]
 }
 
 /** A session written for this plan only. Same shape as a library workout, so it can be saved there. */
@@ -173,4 +187,74 @@ export interface PlanPrefs {
   lastPush?: string
   /** Write changes out automatically while Google access is live in this tab. */
   autoPush?: boolean
+}
+
+// ---- Weekly review (section 13) -------------------------------------------------
+
+/** What accepting a proposal changes. Advice-only proposals have none. */
+export type ReviewChange =
+  | { kind: 'adjustWeek'; week: string; adjust: WeekAdjust }
+  | { kind: 'weekKind'; week: string; to: WeekKind }
+  /** Gives planned session `toId` the content of missed session `fromId`. */
+  | { kind: 'moveSession'; fromId: string; toId: string }
+
+export type ReviewRule = 'missed-key' | 'low-completion' | 'struggling' | 'ill' | 'niggle' | 'targets-easy' | 'targets-hard' | 'work'
+
+export interface ReviewProposal {
+  /** Stable within a review: the rule plus what it's about. */
+  id: string
+  rule: ReviewRule
+  title: string
+  reason: string
+  /** Research finding ids (src/coach/evidence). */
+  findings: string[]
+  judgement?: boolean
+  change?: ReviewChange
+  /** Where to go for an advice-only proposal, e.g. the fitness markers page. */
+  link?: { to: string; label: string }
+}
+
+/** The numbers a review showed, kept so the reasoning stays visible later. */
+export interface ReviewSnapshot {
+  planned: number
+  done: number
+  missed: number
+  skipped: number
+  moved: number
+  plannedSec: number
+  doneSec: number
+  keyDue: number
+  keyDone: number
+  load: number
+  fitness: number
+  fatigue: number
+  checkins: number
+  lowDays: number
+}
+
+export interface WeeklyReview {
+  id: string
+  /** First day of the week reviewed. */
+  weekStart: string
+  blockId?: string
+  status: 'done' | 'skipped'
+  /** 1 (awful) – 5 (great). */
+  felt?: number
+  /** Injury in the coach profile this review added or updated. */
+  injuryId?: string
+  note?: string
+  snapshot?: ReviewSnapshot
+  proposals: ReviewProposal[]
+  /** Ids of the proposals accepted. */
+  accepted: string[]
+  createdAt: string
+  updatedAt: string
+}
+
+/** The morning check's answer for a day, so it's asked once. Keyed by date for sync. */
+export interface DayCheck {
+  date: string
+  choice: 'swapped' | 'kept'
+  reasons: string[]
+  updatedAt: string
 }

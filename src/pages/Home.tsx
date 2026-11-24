@@ -16,6 +16,7 @@ import { usePlan } from '../plan/PlanStore'
 import { useSettings } from '../settings/SettingsContext'
 import { suggestFromLog } from '../markers/estimate'
 import { MARKERS, currentMarkers, formatMarker, isDue } from '../markers/markers'
+import { MorningCheckCard, ReviewDueCard } from './plan/ReviewCards'
 
 function greeting(d: Date) {
   const h = d.getHours()
@@ -64,6 +65,8 @@ export default function Home() {
       </div>
 
       <BackupReminder sessionCount={sessions.length} />
+      <MorningCheckCard />
+      <ReviewDueCard />
 
       <div className="grid gap-5 lg:grid-cols-3">
         <Card title="Today" className="lg:col-span-2">

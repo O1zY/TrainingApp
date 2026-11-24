@@ -101,7 +101,9 @@ function weekSlots(block: Block, week: PlanWeek, workHours: number, notes: strin
   const dropEasy = workHours > 55 ? 2 : workHours > 45 ? 1 : 0
   const easyCounts = new Map<Sport, number>()
 
+  const adj = block.weekAdjust?.[week.start]
   for (const bs of block.sports) {
+    if (adj?.drop?.includes(bs.sport)) continue
     let n = bs.sessions
     let k = Math.min(bs.key, n)
     if (bs.sport !== 'recovery') {
@@ -109,6 +111,8 @@ function weekSlots(block: Block, week: PlanWeek, workHours: number, notes: strin
       else if (week.kind === 'taper') n = Math.max(k, Math.round(n * 0.8))
       else if (week.kind === 'race' || week.kind === 'recovery') [n, k] = [Math.round(n * 0.5), 0]
     }
+    if (adj?.less?.includes(bs.sport)) [n, k] = [Math.max(1, Math.ceil(n / 2)), 0]
+    if (adj?.easyOnly) k = 0
     // Lifting stays in the taper but backs off to maintenance.
     const lightLift = bs.sport === 'strength' && (week.kind === 'taper' || week.kind === 'race')
     for (let i = 0; i < k; i++) slots.push({ sport: bs.sport, intensity: lightLift ? 'moderate' : 'key', nth: i })
@@ -131,11 +135,12 @@ function weekSlots(block: Block, week: PlanWeek, workHours: number, notes: strin
   if (dropEasy) notes.push(`Week of ${week.start}: ${Math.round(workHours)}h of work, so ${dropEasy} easy session${dropEasy > 1 ? 's' : ''} dropped and easy volume cut`)
 
   const main = [...endurance].sort((a, b) => b.key - a.key || b.sessions - a.sessions)[0]
-  if (week.kind === 'deload' && main) {
+  if (week.kind === 'deload' && main && !adj?.easyOnly) {
     // One test per deload, taking the block's test sports in turn so every marker stays current.
     const testSports = (block.testSports ?? []).filter((s) => endurance.some((b) => b.sport === s))
     const sport = testSports.length ? testSports[deloadNo % testSports.length] : main.sport
-    slots.push({ sport, intensity: 'key', test: true, nth: 0 })
+    // Never test a sport the review has cut back or left out this week.
+    if (!adj?.drop?.includes(sport) && !adj?.less?.includes(sport)) slots.push({ sport, intensity: 'key', test: true, nth: 0 })
   }
   if (week.kind === 'race' || week.kind === 'taper') {
     for (const race of week.races) {

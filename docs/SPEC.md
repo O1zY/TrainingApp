@@ -36,7 +36,7 @@ part training tool (plan programmes, reuse sessions, analyse progress) across ev
     - 11c Coach engine and proposal screen (parked 24 Nov 2026: needs a paid Anthropic API key)
     - 11d **Rule-based coach** ✅ (no AI, no running cost): builds the block from the screening and the research library
 12. **Fitness markers and zones** ✅ — threshold numbers per sport, kept with their history, that turn "zone 4" into a real pace or wattage on every planned session
-13. **Weekly review and adapting the plan** (agreed 24 Nov 2026, next) — a Sunday look back that proposes changes to the weeks ahead, plus a morning check that can swap a hard day for an easy one. Built after 12, so its rules can talk about targets
+13. **Weekly review and adapting the plan** ✅ — a Sunday look back that proposes changes to the weeks ahead, plus a morning check that can swap a hard day for an easy one. Built after 12, so its rules can talk about targets
 
 ## Session logging decisions (agreed 23 Oct 2026)
 
@@ -242,28 +242,29 @@ rep drift. HR zones live in Settings (max HR, editable zone tops, default 60/70/
 | Tests | `src/markers/markers.test.ts`: zone and relative targets per sport, resolution order, logging writes targets in, each estimate (incl. the VDOT check), suggestion filtering, staleness and re-test timing, and the planner's built-in, rotating and skipped tests |
 | Not yet | Separate HR zones per sport from lactate-threshold HR; Strava best efforts as estimates (activities that come in as sessions typed Race or Test are already read); race-time predictions from markers |
 
-## Weekly review and adapting the plan (13, agreed 24 Nov 2026 with the defaults: review on the week's last evening, morning swap always asks)
+## Weekly review and adapting the plan decisions (13, 24 Nov 2026)
 
-| Topic | Proposal |
+| Topic | Decision |
 |---|---|
-| Why | The plan is built once and then carries on whatever happens. The review closes the loop: it compares the week with the plan and the check-ins, and proposes changes for the weeks ahead the same way the coach does, never silently |
-| When | From the evening of the week's last day (from the week-start setting), a "Review your week" card on Home and Plan, until done or skipped. Any past week can be reviewed from Plan. Pending Strava imports are offered first so the week is complete |
-| What it shows | Planned vs done per session (done, moved, skipped, missed); key sessions and benchmarks hit or missed, with target results from `summariseTargets`; hours and load against the plan; fitness, fatigue and form; check-in averages against the athlete's own last 4 weeks; sleep; niggles and illness noted. The acute:chronic ratio is shown as information only (finding `no-acwr-rules`) |
-| What it asks | How the week felt (1–5); any new niggle or one getting worse, with a pain score (0–10) that's added to the screening's injury list so its flags apply; anything coming up (away or busy, added to Races & events); an optional note |
-| Rules | Each one gives a proposal with its reason and its findings, or "Coach's judgement": |
-| · Missed key session | Not made up by stacking it into the next week. A missed benchmark or brick moves to the next build week's slot for that sport (judgement) |
-| · Low completion | Under 60% of planned time, or half the key sessions missed: next week repeats this week's volume rather than building. Two such weeks in a row: suggest re-running the coach for a shorter block (judgement; `run-progression`) |
-| · Struggling | 3+ days of the week below the athlete's own normal on sleep, fatigue, soreness or energy, and easy sessions logged at a higher RPE than planned: bring the deload forward a week, or cut next week by 20% (judgement; `sleep`) |
-| · Ill | Illness ticked in a check-in: next week easy only, building back from the following week (judgement) |
-| · Niggle | Pain above 5/10 during training, not settled by the next morning, or higher than last week: less of whatever sets it off next week. A red-flag answer (as in the screening) leaves the sport out until cleared, "see a physio first" (`pain-monitoring`) |
-| · Targets too easy | Most key reps "harder than target" at a lower RPE than planned: suggest a re-test, not more volume (links to 12) |
-| · Targets too hard | Two key sessions in a row mostly missed: suggest a re-test or an easier week before anything else |
-| · Big work week | Next week's shifts heavier than usual (`src/plan/load.ts`): lighten training that week (`plan-around-work`) |
-| Morning check | After the morning check-in, if today has a key session: sleep under 6h or sleep quality 1–2, or HRV clearly below its 7-day baseline with 7+ days of readings, proposes swapping it for an easy session and moving the key one to a later free day in the same week if one fits (`sleep`, `hrv-guided`). Shown on Home as one tap: swap or keep. The HRV threshold to follow the method of the trials in that finding, checked when building |
-| Applying | Accept all, some or none. Session changes edit the planned sessions (locked, so re-planning leaves them alone); volume changes go in a new `weekScale` on the block (% per week start, beside `weekKinds`), then `useReplan` re-plans the unlocked future weeks around work and events as now |
-| Stored | `reviews` in `tt-plan-v1`, one per week start (keyed by `id`): the answers, a snapshot of the numbers shown, the proposals and which were accepted. Shown as a short line on each past week in Plan, so the reasoning stays visible |
-| Logic | `src/review/` (week summary, baselines, rules), pure and tested with made-up weeks for each rule |
-| Not yet | Push notifications (the card waits on Home); rules that learn their thresholds from the athlete's own history (the parked "adaptive coaching", which this is the first step towards) |
+| Why | The plan was built once and then carried on whatever happened. The review compares the week with the plan and the check-ins and proposes changes for the weeks ahead, the way the coach does: never silently |
+| When | "Review your week" on Home and Plan for last week, or this week from 5pm on its last day (week-start setting), until reviewed or skipped; only weeks with planned sessions. Any past week from Plan (a line under the week: "Review this week", or what the review said). Page: `/plan/review/:week`. If Strava is connected and has activities waiting, or hasn't synced since the week ended, it says so first |
+| What it shows | Each planned session as done, moved (logged another day), skipped or missed, with reps on target for key sessions; time done against planned; key sessions; load; check-ins against the athlete's own last 4 weeks (or fixed cut-offs with fewer than 7 check-ins); ill days; injury notes; easy sessions that felt hard; fitness, fatigue, form, and the acute:chronic ratio as information only (`no-acwr-rules`) |
+| What it asks | How the week felt (1–5); any niggle new or worse, in the screening's own injury editor (so the same flags apply) plus "settled by the next morning?", saved to the coach profile; anything coming up (away or busy, saved to Races & events); a note |
+| "Worse than usual" | A check-in more than one SD worse than the athlete's last 4 weeks (at least ¾h of sleep or a point on a scale) on sleep, sleep quality, energy, tiredness or soreness. Fixed cut-offs without 7+ check-ins: under 6h sleep, quality or energy 2 or less, tiredness or soreness 4+ |
+| Rules (`src/review/rules.ts`) | Each proposal has a reason and its findings or "Coach's judgement". Advice-only ones link where to act |
+| · Ill | Illness ticked in a check-in: next week easy only (judgement) |
+| · Niggle | Follows the screening's flags (pain above 5/10 in training, getting worse, at rest or at night, other symptoms, or painful and not looked at): the sports it sets off are left out next week, "see a physio first", and every week after until cleared. Otherwise pain not settled by the next morning: less of those sports next week (`pain-monitoring`) |
+| · Struggling | 3+ check-ins worse than usual and an easy session 2+ RPE above plan, or 5+ such check-ins: bring the deload forward a week when one is still to come, else cut next week 20%, else (next week already lighter) advice only (judgement, `sleep`) |
+| · Low completion | Under 60% of planned time, or half the key sessions missed: next week holds this week's volume. Two weeks running: re-run the coach (judgement, `run-progression`) |
+| · Missed key | A missed benchmark moves into the same sport's next build-week key session after today, skipping a week another proposal makes easy; other missed key sessions aren't made up (judgement) |
+| · Targets | Most key reps faster than target at a lower RPE than planned: re-test, not more volume. Two key sessions in a row mostly short of target: re-test or an easier week. Both link to Fitness markers |
+| · Work | Next week's shifts 25%+ above the last 4 weeks and at least 30h: next week 90% (`plan-around-work`); over 45h the planner already drops easy sessions, so advice only |
+| | Ill and struggling don't stack with low completion or work cuts on the same week. A good week proposes nothing |
+| Morning check | On Home after the day's check-in, if a hard session is planned and not done: under 6h sleep, sleep quality 1–2, or HRV below normal. HRV as in the HRV-guided trials (Javaloyes et al., tabled in Manresa-Rocamora et al. 2021): the 7-day average against the 28 days before, mean ± 0.5 SD; needs 3+ readings this week and 14+ before. "Swap it" turns today into an easy session in the same sport and moves the hard one to the first later day this week with no hard session that day or either side, none in the same sport, and no race that day or the next (or drops it if none fits); "Keep it". Asked once a day (`dayChecks`, keyed by date) |
+| Applying (`src/review/apply.ts`) | Accept all or untick some. Volume, easy-only, less and left-out sports go in `weekAdjust` on the block (per week start; changes to one week combine: the smaller volume and every restriction), deload-forward in `weekKinds`, moved sessions edit the planned session (locked). Then the block re-plans from today. Weeks show "After your review: …" in their notes. Saving a review again applies its answers on top |
+| Stored | `reviews` and `dayChecks` in `tt-plan-v1`: answers, a snapshot of the numbers, the proposals and which were accepted |
+| Tests | `src/review/review.test.ts`: outcomes, own-normal and fixed check-in cut-offs, each rule with a made-up week (including a good week proposing nothing), conflicts between rules, applying and combining changes, the planner honouring them, the morning check and HRV range, the swap, and when a review is due |
+| Not yet | Push notifications; rules that learn their thresholds from the athlete's own history (the parked adaptive coaching) |
 
 ## Parked for later (noted 23 Oct 2026)
 

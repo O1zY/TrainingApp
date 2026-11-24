@@ -4,7 +4,7 @@ import { newId } from '../log/format'
 import { parseProfile } from '../coach/profile'
 import type { AthleteProfile } from '../coach/types'
 import { DEFAULT_PREFS, byDate, mergeImported } from './data'
-import type { Block, Commitment, PlanEvent, PlanPrefs, PlannedSession } from './types'
+import type { Block, Commitment, DayCheck, PlanEvent, PlanPrefs, PlannedSession, WeeklyReview } from './types'
 
 interface PlanData {
   blocks: Block[]
@@ -14,9 +14,13 @@ interface PlanData {
   prefs: PlanPrefs
   /** Coach screening answers (section 11). Missing until the screening is first saved. */
   profile?: AthleteProfile
+  /** Weekly reviews (section 13), one per week start. */
+  reviews: WeeklyReview[]
+  /** Answers to the morning check, one per day. */
+  dayChecks: DayCheck[]
 }
 
-const EMPTY: PlanData = { blocks: [], planned: [], events: [], commitments: [], prefs: DEFAULT_PREFS }
+const EMPTY: PlanData = { blocks: [], planned: [], events: [], commitments: [], prefs: DEFAULT_PREFS, reviews: [], dayChecks: [] }
 
 // Plan data lives in localStorage next to the log until the Supabase section;
 // this is the only store that touches it.
@@ -45,6 +49,10 @@ interface PlanValue extends PlanData {
   replaceImported: (source: Commitment['source'], from: string, to: string, list: Omit<Commitment, 'id'>[]) => void
   updatePrefs: (patch: Partial<PlanPrefs>) => void
   saveProfile: (profile: Omit<AthleteProfile, 'updatedAt'>) => void
+  /** Saves a review, replacing any earlier one for the same week. */
+  saveReview: (draft: Omit<WeeklyReview, 'id' | 'createdAt' | 'updatedAt'> & { id?: string; createdAt?: string }) => WeeklyReview
+  deleteReview: (id: string) => void
+  saveDayCheck: (check: Omit<DayCheck, 'updatedAt'>) => void
 }
 
 const PlanContext = createContext<PlanValue | null>(null)
@@ -129,6 +137,26 @@ export function PlanProvider({ children }: { children: ReactNode }) {
 
     saveProfile(profile) {
       setData((d) => ({ ...d, profile: { ...profile, updatedAt: stamp() } }))
+    },
+
+    saveReview(draft) {
+      const now = stamp()
+      const earlier = data.reviews.find((r) => r.weekStart === draft.weekStart)
+      const review: WeeklyReview = { ...draft, id: draft.id ?? earlier?.id ?? newId(), createdAt: draft.createdAt ?? earlier?.createdAt ?? now, updatedAt: now }
+      setData((d) => ({
+        ...d,
+        reviews: [...d.reviews.filter((r) => r.id !== review.id && r.weekStart !== review.weekStart), review].sort((a, b) => a.weekStart.localeCompare(b.weekStart)),
+      }))
+      return review
+    },
+
+    deleteReview(id) {
+      setData((d) => ({ ...d, reviews: d.reviews.filter((r) => r.id !== id) }))
+    },
+
+    saveDayCheck(check) {
+      const item = { ...check, updatedAt: stamp() }
+      setData((d) => ({ ...d, dayChecks: upsert(d.dayChecks, item, (c) => c.date === item.date) }))
     },
   }
 

@@ -1,6 +1,6 @@
 import { addDays, daysBetween } from './dates'
 import { covers } from './events'
-import type { Block, PlanEvent, WeekKind } from './types'
+import type { Block, PlanEvent, WeekAdjust, WeekKind } from './types'
 
 export interface PlanWeek {
   start: string
@@ -53,7 +53,10 @@ export function weekLabel(w: Pick<PlanWeek, 'kind' | 'buildNo'>) {
  * - A deload due the week before a taper is skipped, as the taper does its job.
  * Weeks set by hand always win and the rhythm counts on from them.
  */
-export function blockWeeks(block: Pick<Block, 'start' | 'weeks' | 'buildWeeks' | 'progressionPct' | 'deloadPct' | 'cycleGrowthPct' | 'weekKinds'>, events: PlanEvent[]): PlanWeek[] {
+export function blockWeeks(
+  block: Pick<Block, 'start' | 'weeks' | 'buildWeeks' | 'progressionPct' | 'deloadPct' | 'cycleGrowthPct' | 'weekKinds' | 'weekAdjust'>,
+  events: PlanEvent[],
+): PlanWeek[] {
   const end = addDays(block.start, block.weeks * 7 - 1)
   const weeks: PlanWeek[] = Array.from({ length: block.weeks }, (_, i) => {
     const start = addDays(block.start, i * 7)
@@ -145,6 +148,25 @@ export function blockWeeks(block: Pick<Block, 'start' | 'weeks' | 'buildWeeks' |
             : w.kind === 'race'
               ? (aRace ? 0.5 : 0.8) * f
               : 0.5 * f
+    const adj = block.weekAdjust?.[w.start]
+    if (adj) {
+      if (adj.scale != null && adj.scale !== 100) w.volume *= adj.scale / 100
+      w.notes.push(`After your review: ${describeAdjust(adj)}`)
+    }
   })
   return weeks
+}
+
+const SPORT_WORD: Record<string, string> = { row: 'on-water', erg: 'erg', run: 'running', bike: 'cycling', swim: 'swimming', strength: 'strength', recovery: 'recovery', other: 'other' }
+
+/** "volume 80%, easy only, less running, no cycling" */
+export function describeAdjust(a: WeekAdjust): string {
+  return [
+    a.scale != null && a.scale !== 100 && `volume ${a.scale}%`,
+    a.easyOnly && 'easy only',
+    a.less?.length && `less ${a.less.map((s) => SPORT_WORD[s] ?? s).join(' and ')}`,
+    a.drop?.length && `no ${a.drop.map((s) => SPORT_WORD[s] ?? s).join(' or ')}`,
+  ]
+    .filter(Boolean)
+    .join(', ')
 }
