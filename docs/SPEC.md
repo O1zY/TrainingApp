@@ -32,7 +32,7 @@ part training tool (plan programmes, reuse sessions, analyse progress) across ev
 10. **Sync across devices** ✅ — one copy of the data in a database, shared by phone and laptop
 11. **AI coach: research-led plan builder** (in progress) — pre-plan screening, then a researched, cited block that the existing planner schedules around work
     - 11a **Screening and athlete profile** ✅
-    - 11b Duathlon/triathlon research library
+    - 11b **Duathlon/triathlon research library** ✅
     - 11c Coach engine and proposal screen
 
 ## Session logging decisions (agreed 23 Oct 2026)
@@ -190,6 +190,18 @@ rep drift. HR zones live in Settings (max HR, editable zone tops, default 60/70/
 | From the data | Training history is worked out, not asked: the last 12 whole weeks of the log (hours, days, per-sport sessions, distance and longest, multisport count, fitness/fatigue/form, check-in averages, niggle tags and injury notes). The work pattern comes from the next 4 weeks of shifts, or the last 4 if none are added. Logic `src/coach/history.ts` |
 | Flags | Any health yes → see a GP before intensity. An injury with pain at rest, at night, getting worse, other symptoms or training pain above 5/10 (after the pain-monitoring model, Silbernagel et al. 2007), or painful and not looked at, → see a physio first, and what sets it off is kept out of plans until cleared. Otherwise the coach plans around it. Logic `src/coach/screening.ts` |
 | Not yet | Nothing is sent anywhere: the coach that reads the profile is 11c |
+
+## Research library decisions (11b, 24 Nov 2026)
+
+| Topic | Decision |
+|---|---|
+| Where | `src/coach/evidence/`: `sources.ts` (the studies), `findings.ts` (what the coach may plan from), `index.ts` (look-ups and relevance). Browsable on Plan › Coach › Research (`/plan/coach/research`), "For you" or all |
+| Sources | 33 papers, each found in the paper index (PubMed/PMC) and its authors, year, journal, DOI and PubMed id checked, with the finding restated from its abstract (publisher or PubMed page). Volume/pages only where seen. Nothing added from memory alone |
+| Findings | 17, each with a plain summary, guidance with numbers, caveats, an evidence strength and which part of the plan it shapes. Where a number is coaching convention rather than a study result (sets and reps, brick length, the 10% run rule), the caveat says so. Counter-evidence is kept in (e.g. threshold training matching polarised in recreational runners; block periodisation's conflicting trials) |
+| Topics | Intensity mix, long intervals, taper, bricks, bike pacing, cadence, first km off the bike, duathlon pacing, heavy strength, lifting order, run progression, the acute:chronic ratio (information only), pain monitoring, sleep, HRV-guided days, block periodisation, planning around work |
+| Strength rules (tested) | Strong needs a meta-analysis or systematic review among its sources; moderate needs a trial or review; every source is cited and every citation exists |
+| Relevance | From the screening: duathlon or triathlon, running, an injury, lifting or gym access, HRV in recent check-ins, work shifts, an A race. Each relevant finding says why it applies |
+| Gaps | Swimming technique and open-water skills, heat, nutrition, rowing, running and strength as main goals: to be added, or answered by live paper search in 11c (marked not vetted) |
 
 ## Parked for later (noted 23 Oct 2026)
 

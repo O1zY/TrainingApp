@@ -284,7 +284,19 @@ function CoachCard() {
   const p = profile ? progress(profile, events, today) : undefined
   const stops = profile ? allFlags(profile).filter((f) => f.level === 'stop').length : 0
   return (
-    <Card title="Coach" action={<Link to="/plan/coach" className="text-sm font-medium text-accent-strong">{p ? 'Open' : 'Start'}</Link>}>
+    <Card
+      title="Coach"
+      action={
+        <span className="flex gap-3">
+          <Link to="/plan/coach/research" className="text-sm font-medium text-accent-strong">
+            Research
+          </Link>
+          <Link to="/plan/coach" className="text-sm font-medium text-accent-strong">
+            {p ? 'Open' : 'Start'}
+          </Link>
+        </span>
+      }
+    >
       <Link to="/plan/coach" className="flex items-center gap-3">
         <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent-strong">
           <ClipboardCheck className="size-5" />

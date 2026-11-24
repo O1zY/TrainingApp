@@ -1,4 +1,4 @@
-import { ArrowLeft, Check, Plus } from 'lucide-react'
+import { ArrowLeft, BookOpen, Check, Plus } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Field, FieldGroup, MultiChips, NumberInput, Section, TextArea, TimeInput, Toggle, inputClass } from '../../../components/fields'
@@ -105,7 +105,15 @@ export default function Screening() {
       <Link to="/plan" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-text">
         <ArrowLeft className="size-4" /> Plan
       </Link>
-      <PageHeader title="Coach screening" subtitle="What the coach needs to know before building your plan. Anything your log and shifts already show is filled in for you to check." />
+      <PageHeader
+        title="Coach screening"
+        subtitle="What the coach needs to know before building your plan. Anything your log and shifts already show is filled in for you to check."
+        action={
+          <Link to="/plan/coach/research" className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-line px-3 py-2 text-sm font-semibold hover:bg-surface-2">
+            <BookOpen className="size-4" /> Research
+          </Link>
+        }
+      />
 
       <Card className="max-w-3xl">
         <div className="flex items-center justify-between gap-3">

@@ -46,6 +46,7 @@ const NewPlanned = pick(plannedDetail, 'NewPlanned')
 const EditPlanned = pick(plannedDetail, 'EditPlanned')
 const Work = lazy(() => import('./pages/plan/Work'))
 const Screening = lazy(() => import('./pages/plan/coach/Screening'))
+const Research = lazy(() => import('./pages/plan/coach/Research'))
 const Settings = lazy(() => import('./pages/Settings'))
 const strava = () => import('./pages/log/Strava')
 const StravaPage = lazy(strava)
@@ -69,6 +70,7 @@ export default function App() {
                     <Route path="block/:id/edit" element={<EditBlock />} />
                     <Route path="work" element={<Work />} />
                     <Route path="coach" element={<Screening />} />
+                    <Route path="coach/research" element={<Research />} />
                     <Route path="events" element={<Events />} />
                     <Route path="events/new" element={<NewEvent />} />
                     <Route path="events/:id/edit" element={<EditEvent />} />
