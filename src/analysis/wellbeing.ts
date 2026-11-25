@@ -6,6 +6,7 @@
 // Relationships use Spearman's rank correlation, which suits 1–5 scales and doesn't let one
 // huge day dominate. Nothing here claims cause: it shows what tends to go together.
 
+import { formatSleep } from '../log/format'
 import { wellnessScore } from '../log/stats'
 import type { Wellbeing } from '../log/types'
 import { addDays } from '../plan/dates'
@@ -37,7 +38,7 @@ const scale = (v: number) => v.toFixed(1)
 
 export const METRICS: Metric[] = [
   { key: 'wellness', label: 'Wellness score', better: 'higher', get: (w) => wellnessScore(w), format: scale },
-  { key: 'sleepHours', label: 'Sleep', better: 'higher', get: (w) => w.sleepHours, format: (v) => `${v.toFixed(1)}h` },
+  { key: 'sleepHours', label: 'Sleep', better: 'higher', get: (w) => w.sleepHours, format: formatSleep },
   { key: 'sleepQuality', label: 'Sleep quality', better: 'higher', get: (w) => w.sleepQuality, format: scale },
   { key: 'restingHr', label: 'Resting HR', better: 'lower', get: (w) => w.restingHr, format: (v) => `${Math.round(v)}` },
   { key: 'hrv', label: 'HRV', better: 'higher', get: (w) => w.hrv, format: (v) => `${Math.round(v)}ms` },

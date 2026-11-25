@@ -70,7 +70,7 @@ rep drift. HR zones live in Settings (max HR, editable zone tops, default 60/70/
 | Topic | Decision |
 |---|---|
 | Contents | Structure + targets, strength templates by % of 1RM (or fixed weight), tags, description, source/reference |
-| Starter set | None. Built up later from research and Ollie's own sessions; `source` records where each came from |
+| Starter set | An optional set of 23 triathlon/duathlon sessions, added in one tap from the Library page (`src/library/starter.ts`, 25 Nov 2026): Brownlee, Yee and Norwegian-block sessions as published, the three field tests that set the markers (CSS, 20′ FTP, 30′ run), basic easy/long/strength/mobility sessions. Fixed ids, so adding twice or on two devices never duplicates; the offer disappears once any are in. `source` says where each came from and what was scaled |
 | Rep editing | Edited as sets of identical reps (“8 × 500m, 2′ rest”), stored flat as `PieceTemplate`s |
 | Log from template | `/log/new?workout=id` pre-fills targets, rest, the fixed side of each rep (distance *or* time) and % sets turned into kg from the current 1RM (rounded to 2.5kg). The session keeps `workoutId` |
 | Save to library | Any logged session → its structure and targets (not results) |
@@ -292,3 +292,14 @@ rep drift. HR zones live in Settings (max HR, editable zone tops, default 60/70/
 - All colours come from tokens in `src/index.css` (`bg-surface`, `text-muted`, `bg-accent`, `text-sport-row`, …). Each discipline has its own colour token for logs, plans and charts.
 - Shared UI pieces live in `src/components/ui.tsx`; nav items in `src/layout/nav.ts`.
 - Settings are in `src/settings/SettingsContext.tsx` (localStorage until Supabase arrives).
+
+## Triathlon focus: sleep, weight, week view, starter library (25 Nov 2026)
+
+| Topic | Decision |
+|---|---|
+| Focus | The app leans to triathlon, duathlon and multisport; rowing and CrossFit stay but are no longer the lead |
+| Sleep | Typed as hours and minutes (`HoursMinutesInput`), still stored as decimal hours so existing check-ins, analysis and sync are untouched. Shown as "7h 30m" everywhere (`formatSleep`) |
+| This week (Home) | Each day is a button; the picked day shows its work, race, planned sessions still to do and what was logged, with "Add session". Open plan goes to that week |
+| Weight | `/log/weight`, from Log › Your numbers. Weigh-ins are the check-in's `weightKg` (one per day, same record as the daily check-in), so nothing new to sync. The 7-day trailing average is the headline (`src/analysis/weight.ts`), single weigh-ins are dots behind it; change over 4 and 12 weeks; optional goal weight (`targetWeightKg` in settings) drawn as a dashed line; ranges 4 wk to all |
+| Starter sessions | See Session library decisions above. Targets are relative (% FTP, offsets against threshold pace or CSS, HR zones), so they resolve from each user's markers |
+| Not done | Brick and multisport sessions as one library item (library workouts are one sport; a brick is a bike and a run workout); open-water swim sets; a weight goal date |

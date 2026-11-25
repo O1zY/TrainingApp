@@ -148,7 +148,14 @@ export function describeGroup(g: { count: number; piece: PieceTemplate }, sport:
 export function structureSummary(w: Workout, units: Units, ctx?: ZoneContext): string {
   if (w.pieces?.length) {
     const groups = groupPieces(w.pieces)
-    const shape = groups.map((g) => `${g.count > 1 ? `${g.count}×` : ''}${pieceLength(g.piece, w.sport, units)}`).join(' + ')
+    const lengths = groups.map((g) => pieceLength(g.piece, w.sport, units))
+    // Many different reps (a progression, or a long mixed set) read better as a count than as a sum.
+    const shape =
+      groups.length <= 4
+        ? groups.map((g, i) => `${g.count > 1 ? `${g.count}×` : ''}${lengths[i]}`).join(' + ')
+        : new Set(lengths).size === 1
+          ? `${w.pieces.length}×${lengths[0]}`
+          : `${w.pieces.length} pieces`
     const aim = groups.length === 1 ? describeAim(groups[0].piece, w.sport, units, ctx) : ''
     return [shape, aim].filter(Boolean).join(' · ')
   }

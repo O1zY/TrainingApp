@@ -1,15 +1,15 @@
-import { DatabaseBackup, Flag, Gauge, HeartPulse } from 'lucide-react'
+import { DatabaseBackup, Flag, Gauge, HeartPulse, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { backupDue, daysSinceBackup, downloadBackup, readMeta } from '../backup'
 import { Link } from 'react-router-dom'
 import { Card, StatTile } from '../components/ui'
-import { formatHoursMinutes, todayIso } from '../log/format'
+import { formatDate, formatHoursMinutes, todayIso } from '../log/format'
 import { useLog } from '../log/LogStore'
 import { SPORTS } from '../log/sports'
 import { sessionLoad } from '../log/stats'
-import { Feed } from './log/Feed'
+import { DayFeed, Feed } from './log/Feed'
 import { CommitmentLine, PlannedRow } from './plan/bits'
-import { daysBetween } from '../plan/dates'
+import { daysBetween, weekStart } from '../plan/dates'
 import { raceLabel } from '../plan/events'
 import { loggedFor } from '../plan/planned'
 import { usePlan } from '../plan/PlanStore'
@@ -48,6 +48,8 @@ export default function Home() {
   const todayWork = commitments.filter((c) => c.date === todayIso(today))
   const nextRace = events.find((e) => e.kind === 'race' && e.date >= todayIso(today))
   const toGo = nextRace ? daysBetween(todayIso(today), nextRace.date) : 0
+  const [picked, setPicked] = useState<string>()
+  const selected = picked && weekIsos.includes(picked) ? picked : todayIso(today)
 
   return (
     <div className="space-y-5">
@@ -129,16 +131,24 @@ export default function Home() {
         </Card>
       </div>
 
-      <Card title="This week" action={<Link to="/plan" className="text-sm font-medium text-accent-strong">Open plan</Link>}>
-        <div className="grid grid-cols-7 gap-1.5 md:gap-3">
+      <Card title="This week" action={<Link to={`/plan?week=${weekStart(todayIso(today), settings.weekStartsOn)}`} className="text-sm font-medium text-accent-strong">Open plan</Link>}>
+        <div className="grid grid-cols-7 gap-1.5 md:gap-3" role="group" aria-label="Pick a day of this week">
           {days.map((d) => {
+            const iso = todayIso(d)
             const isToday = sameDay(d, today)
-            const daySessions = week.filter((s) => s.date === todayIso(d))
-            const dayPlanned = planned.filter((p) => p.date === todayIso(d) && !p.skipped && !loggedFor(p, sessions))
+            const isSelected = iso === selected
+            const daySessions = week.filter((s) => s.date === iso)
+            const dayPlanned = planned.filter((p) => p.date === iso && !p.skipped && !loggedFor(p, sessions))
             return (
-              <div
-                key={d.toISOString()}
-                className={`flex flex-col items-center rounded-2xl py-2.5 md:py-4 ${isToday ? 'bg-contrast text-on-contrast' : 'bg-surface-2'}`}
+              <button
+                key={iso}
+                type="button"
+                aria-pressed={isSelected}
+                aria-label={d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
+                onClick={() => setPicked(iso)}
+                className={`flex flex-col items-center rounded-2xl py-2.5 outline-none transition focus-visible:ring-2 focus-visible:ring-accent md:py-4 ${
+                  isToday ? 'bg-contrast text-on-contrast' : 'bg-surface-2 hover:bg-surface-2/60'
+                } ${isSelected ? 'ring-2 ring-accent ring-offset-2 ring-offset-surface' : ''}`}
               >
                 <span className={`text-[11px] font-semibold uppercase tracking-wider ${isToday ? 'opacity-70' : 'text-muted'}`}>
                   {d.toLocaleDateString('en-GB', { weekday: 'short' }).slice(0, 3)}
@@ -152,10 +162,11 @@ export default function Home() {
                     <span key={p.id} title={`Planned: ${p.title}`} className={`size-1.5 rounded-full border ${SPORTS[p.sport].text} border-current`} />
                   ))}
                 </span>
-              </div>
+              </button>
             )
           })}
         </div>
+        <DayPanel date={selected} />
       </Card>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-5">
@@ -242,5 +253,44 @@ function MarkersStrip() {
         </p>
       )}
     </Card>
+  )
+}
+
+/** The picked day of the week: work, what's planned and still to do, and what's been logged. */
+function DayPanel({ date }: { date: string }) {
+  const { sessions, wellbeing } = useLog()
+  const { planned, commitments, events } = usePlan()
+  const today = todayIso()
+  const work = commitments.filter((c) => c.date === date)
+  const todo = planned.filter((p) => p.date === date && !loggedFor(p, sessions))
+  const logged = sessions.some((s) => s.date === date) || wellbeing.some((w) => w.date === date)
+  const races = events.filter((e) => e.kind === 'race' && e.date === date)
+  const empty = !work.length && !todo.length && !logged && !races.length
+  return (
+    <div className="mt-5 border-t border-line pt-4">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h3 className="font-semibold">{date === today ? 'Today' : formatDate(date, { weekday: 'long', day: 'numeric', month: 'long' })}</h3>
+        <Link to={`/plan/session/new?date=${date}`} className="inline-flex items-center gap-1 text-sm font-medium text-accent-strong">
+          <Plus className="size-4" /> Add session
+        </Link>
+      </div>
+      <div className="space-y-2">
+        {races.map((r) => (
+          <Link key={r.id} to={`/plan/events/${r.id}/edit`} className="flex items-center gap-2 text-sm font-medium hover:text-accent-strong">
+            <Flag className="size-4 shrink-0 text-phase-race" />
+            <span className="truncate">{r.name}</span>
+            <span className="shrink-0 text-xs text-muted">{raceLabel(r)}</span>
+          </Link>
+        ))}
+        {work.map((c) => (
+          <CommitmentLine key={c.id} c={c} />
+        ))}
+        {todo.map((p) => (
+          <PlannedRow key={p.id} p={p} />
+        ))}
+        <DayFeed date={date} />
+        {empty && <p className="text-sm text-muted">{date < today ? 'Nothing was planned or logged.' : 'Nothing planned. A rest day, or add a session.'}</p>}
+      </div>
+    </div>
   )
 }

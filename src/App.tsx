@@ -15,6 +15,7 @@ const pick = <M, K extends keyof M>(load: () => Promise<M>, name: K) => lazy(() 
 const Home = lazy(() => import('./pages/Home'))
 const LogHome = lazy(() => import('./pages/log/LogHome'))
 const Maxes = lazy(() => import('./pages/log/Maxes'))
+const Weight = lazy(() => import('./pages/log/Weight'))
 const Markers = lazy(() => import('./pages/log/Markers'))
 const multisport = () => import('./pages/log/Multisport')
 const NewMultisport = pick(multisport, 'NewMultisport')
@@ -93,6 +94,7 @@ export default function App() {
                     <Route path="multi/:id/edit" element={<EditMultisport />} />
                     <Route path="wellbeing/:date" element={<WellbeingDetail />} />
                     <Route path="wellbeing/:date/edit" element={<WellbeingForm />} />
+                    <Route path="weight" element={<Weight />} />
                     <Route path="maxes" element={<Maxes />} />
                     <Route path="markers" element={<Markers />} />
                     <Route path="strava" element={<StravaPage />} />

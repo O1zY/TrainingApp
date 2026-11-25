@@ -2,7 +2,7 @@
 // or HRV says the body isn't ready, offer to swap it for an easy one and move the hard one
 // later in the week. Always asked, never done silently.
 
-import { newId } from '../log/format'
+import { formatSleep, newId } from '../log/format'
 import type { Session, Wellbeing } from '../log/types'
 import { addDays, weekDates, weekStart } from '../plan/dates'
 import { buildOneOff, estimateSec, specsFor } from '../plan/oneOffs'
@@ -60,7 +60,7 @@ export function morningCheck(input: { today: string; planned: PlannedSession[]; 
   const reasons: string[] = []
   const findings = new Set<string>()
   if (checkin.sleepHours != null && checkin.sleepHours < SHORT_SLEEP_H) {
-    reasons.push(`${checkin.sleepHours}h sleep`)
+    reasons.push(`${formatSleep(checkin.sleepHours)} sleep`)
     findings.add('sleep')
   }
   if (checkin.sleepQuality != null && checkin.sleepQuality <= 2) {

@@ -1,9 +1,9 @@
-import { Dumbbell, Gauge, HeartPulse } from 'lucide-react'
+import { Dumbbell, Gauge, HeartPulse, Scale } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Chips } from '../../components/fields'
 import { Card, PageHeader } from '../../components/ui'
-import { todayIso } from '../../log/format'
+import { formatWeight, todayIso, weightUnit } from '../../log/format'
 import { useLog } from '../../log/LogStore'
 import { LOGGABLE, SPORTS } from '../../log/sports'
 import type { Sport } from '../../log/types'
@@ -22,6 +22,7 @@ export default function LogHome() {
   const today = todayIso()
   const checkin = wellbeing.find((w) => w.date === today)
   const usedSports = LOGGABLE.filter((s) => sessions.some((x) => x.sport === s))
+  const latestWeight = [...wellbeing].filter((w) => w.weightKg != null).sort((a, b) => b.date.localeCompare(a.date))[0]
   const dueCount = Object.values(currentMarkers(markers)).filter((m) => isDue(m, today, settings.retestWeeks)).length
 
   return (
@@ -64,6 +65,15 @@ export default function LogHome() {
               <span>
                 <span className="block font-semibold">Fitness markers{dueCount ? ` · ${dueCount} due a re-test` : ''}</span>
                 <span className="text-muted">Run threshold, FTP, 2k, CSS and HR: they set your paces and watts.</span>
+              </span>
+            </Link>
+            <Link to="/log/weight" className="flex items-center gap-3 text-sm">
+              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent-strong">
+                <Scale className="size-5" />
+              </span>
+              <span>
+                <span className="block font-semibold">Weight{latestWeight ? ` · ${formatWeight(latestWeight.weightKg, settings.units)}${weightUnit(settings.units)}` : ''}</span>
+                <span className="text-muted">Weigh in, see the 7-day trend and set a goal.</span>
               </span>
             </Link>
             <Link to="/log/maxes" className="flex items-center gap-3 text-sm">

@@ -258,7 +258,7 @@ describe('morning check', () => {
 
   it('offers a swap after a short night, and asks only once', () => {
     const input = { today, planned: [key], sessions: [], wellbeing: [checkin(today, { sleepHours: 5.5 })], dayChecks: [] as DayCheck[] }
-    expect(morningCheck(input)).toMatchObject({ session: key, reasons: ['5.5h sleep'], findings: ['sleep'] })
+    expect(morningCheck(input)).toMatchObject({ session: key, reasons: ['5h 30m sleep'], findings: ['sleep'] })
     expect(morningCheck({ ...input, dayChecks: [{ date: today, choice: 'kept', reasons: [], updatedAt: '' }] })).toBeUndefined()
     expect(morningCheck({ ...input, wellbeing: [checkin(today, { sleepHours: 7.5 })] })).toBeUndefined()
     expect(morningCheck({ ...input, wellbeing: [] })).toBeUndefined()
