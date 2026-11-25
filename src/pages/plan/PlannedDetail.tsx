@@ -1,4 +1,4 @@
-import { ArrowLeft, BookOpen, Check, Lock, Pencil, Play, Repeat, SkipForward, Trash2 } from 'lucide-react'
+import { ArrowLeft, BookOpen, Check, Lock, Pencil, Play, Repeat, SkipForward, Trash2, Waypoints } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Chips, Field, FieldGroup, TextArea, TextInput, TimeInput, inputClass } from '../../components/fields'
@@ -6,17 +6,18 @@ import { Card, PageHeader, Segmented } from '../../components/ui'
 import { formatPlanTime, isBrick, structureSummary } from '../../library/workouts'
 import { formatDate, todayIso } from '../../log/format'
 import { useLog } from '../../log/LogStore'
-import { SPORTS, WOD_FORMATS, sessionName } from '../../log/sports'
+import { SPORTS, WOD_FORMATS, kindLabel, sessionName } from '../../log/sports'
 import { describeAim } from '../../log/targets'
 import type { Sport } from '../../log/types'
 import { weekStart } from '../../plan/dates'
+import { estimateBrickSec } from '../../plan/bricks'
 import { INTENSITY_LABEL } from '../../plan/generate'
 import { estimateSec } from '../../plan/oneOffs'
 import { blockEnd, loggedFor, plannedWorkout } from '../../plan/planned'
 import { usePlan, type PlannedDraft } from '../../plan/PlanStore'
 import type { Intensity, PlannedSession } from '../../plan/types'
 import { useSettings } from '../../settings/SettingsContext'
-import { Exercises, History, Structure } from '../library/WorkoutDetail'
+import { BrickHistory, Exercises, History, Leg, Structure } from '../library/WorkoutDetail'
 import { SportPicker } from '../log/SessionForm'
 import { IntensityPill } from './bits'
 import { useZoneContext } from '../../markers/useZones'
@@ -63,7 +64,7 @@ function SourceCard({ p }: { p: PlannedSession }) {
   const swap = (id: string) => {
     const w = workouts.find((x) => x.id === id)
     if (!w) return
-    savePlanned({ ...p, workoutId: w.id, oneOff: undefined, benchmark: undefined, title: w.name, durationSec: estimateSec(w), reason: p.reason, locked: true })
+    savePlanned({ ...p, workoutId: w.id, legSports: undefined, oneOff: undefined, benchmark: undefined, title: w.name, durationSec: estimateSec(w), reason: p.reason, locked: true })
   }
 
   const toLibrary = () => {
@@ -118,9 +119,12 @@ export default function PlannedDetail() {
   const done = loggedFor(p, sessions)
   const event = events.find((e) => e.id === p.eventId)
   const weekHref = `/plan?week=${weekStart(p.date, settings.weekStartsOn)}`
+  const brick = !!p.legSports?.length
   const logHref = event?.multisport
     ? `/log/multi/new?kind=${event.multisport}&date=${p.date}&title=${encodeURIComponent(p.title)}`
-    : `/log/new?plan=${p.id}`
+    : brick
+      ? `/log/multi/new?plan=${p.id}`
+      : `/log/new?plan=${p.id}`
   const steady = w && !w.pieces?.length && !w.exercises?.length && !w.wod
   const aim = w ? describeAim(w, w.sport, settings.units, zones) : ''
 
@@ -138,8 +142,8 @@ export default function PlannedDetail() {
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3">
-          <span className={`grid size-12 shrink-0 place-items-center rounded-xl ${def.soft} ${def.text}`}>
-            <def.icon className="size-6" />
+          <span className={`grid size-12 shrink-0 place-items-center rounded-xl ${brick ? 'bg-accent-soft text-accent-strong' : `${def.soft} ${def.text}`}`}>
+            {brick ? <Waypoints className="size-6" /> : <def.icon className="size-6" />}
           </span>
           <div>
             <h1 className="text-2xl font-bold tracking-tight">{p.title}</h1>
@@ -150,7 +154,7 @@ export default function PlannedDetail() {
             </p>
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <IntensityPill value={p.intensity} />
-              <span className="text-xs text-muted">{def.label}</span>
+              <span className="text-xs text-muted">{brick ? [w?.brickKind && kindLabel(w.brickKind), p.legSports!.map((s) => SPORTS[s].label).join(' → ')].filter(Boolean).join(' · ') : def.label}</span>
               {p.benchmark && (
                 <span className="inline-flex items-center gap-1 text-xs font-medium text-accent-strong">
                   <Repeat className="size-3.5" /> Benchmark: repeats each cycle
@@ -184,10 +188,10 @@ export default function PlannedDetail() {
       </div>
 
       {done ? (
-        <Link to={`/log/session/${done.id}`} className="flex items-center gap-3 rounded-xl border border-hit/40 bg-hit/10 px-4 py-3 text-sm">
+        <Link to={done.multisportId ? `/log/multi/${done.multisportId}` : `/log/session/${done.id}`} className="flex items-center gap-3 rounded-xl border border-hit/40 bg-hit/10 px-4 py-3 text-sm">
           <Check className="size-5 text-hit" />
           <span>
-            Done: <span className="font-semibold">{sessionName(done)}</span> on {formatDate(done.date)}
+            Done: <span className="font-semibold">{done.multisportId ? p.title : sessionName(done)}</span> on {formatDate(done.date)}
           </span>
         </Link>
       ) : (
@@ -214,6 +218,9 @@ export default function PlannedDetail() {
         </Card>
       )}
 
+      {w?.legs?.map((l, i) => (
+        <Leg key={l.id} leg={l} n={i + 1} w={w} />
+      ))}
       {w?.pieces?.length ? <Structure w={w} /> : null}
       {w?.exercises?.length ? <Exercises w={w} /> : null}
       {w?.wod && (
@@ -231,7 +238,7 @@ export default function PlannedDetail() {
         </div>
       )}
 
-      {p.workoutId && w && <History w={w} />}
+      {p.workoutId && w && (brick ? <BrickHistory w={w} /> : <History w={w} />)}
     </div>
   )
 }
@@ -255,12 +262,12 @@ function PlannedForm({ initial, editing }: { initial: PlannedDraft; editing: boo
     e.preventDefault()
     let out: PlannedDraft
     if (source === 'library' && lib) {
-      out = { ...draft, workoutId: lib.id, oneOff: undefined, title: lib.name, durationSec: draft.durationSec ?? estimateSec(lib) }
+      out = { ...draft, workoutId: lib.id, oneOff: undefined, legSports: lib.legs?.map((l) => l.sport), title: lib.name, durationSec: draft.durationSec ?? (isBrick(lib) ? estimateBrickSec(lib.legs!) : estimateSec(lib)) }
     } else {
       const title = draft.title.trim() || sessionName({ sport: draft.sport })
       const base = draft.oneOff ?? { name: title, sport: draft.sport, tags: [] }
       const oneOff = { ...base, name: title, sport: draft.sport, durationSec: structured ? base.durationSec : draft.durationSec }
-      out = { ...draft, title, workoutId: undefined, oneOff }
+      out = { ...draft, title, workoutId: undefined, legSports: oneOff.legs?.map((l) => l.sport), oneOff }
     }
     const saved = savePlanned({ ...out, locked: true, reason: editing ? out.reason : 'Added by you' })
     navigate(`/plan/session/${saved.id}`, { replace: editing })

@@ -69,6 +69,12 @@ export interface Block {
    * Missing: the block's main sport every time.
    */
   testSports?: Sport[]
+  /**
+   * Bricks a week: a brick uses up one session in each sport it covers, so a bike–run brick
+   * replaces a bike session and a run session. Build weeks get this many, taper weeks a short one,
+   * deload, race and recovery weeks none. Missing: none.
+   */
+  bricksPerWeek?: number
   /** Library workouts repeated once per cycle, in the same build week, so attempts compare. */
   benchmarks: string[]
   /** 0–100: share of the other sessions taken from the library rather than one-offs. */
@@ -109,6 +115,8 @@ export interface PlannedSession {
   sport: Sport
   intensity: Intensity
   title: string
+  /** Sports of a brick's legs, in order. Set when the session is a brick; `sport` is then the first leg's. */
+  legSports?: Sport[]
   /** Library workout to do. */
   workoutId?: string
   /** Or a one-off written by the planner (or by hand). */

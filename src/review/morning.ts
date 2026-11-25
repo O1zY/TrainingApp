@@ -96,6 +96,7 @@ export function swapPlan(input: { today: string; session: PlannedSession; planne
     intensity: 'easy',
     title: oneOff.name,
     workoutId: undefined,
+    legSports: undefined,
     oneOff,
     benchmark: undefined,
     durationSec: estimateSec(oneOff),

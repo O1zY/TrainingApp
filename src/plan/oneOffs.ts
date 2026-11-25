@@ -159,7 +159,7 @@ const GENERIC: Record<Exclude<Intensity, 'race'>, Spec[]> = {
 }
 
 /** Rough work pace in seconds per metre, for estimating how long distance reps take. */
-const SEC_PER_M: Partial<Record<Sport, number>> = { erg: 0.22, row: 0.24, run: 0.27, bike: 0.12, swim: 1.1 }
+export const SEC_PER_M: Partial<Record<Sport, number>> = { erg: 0.22, row: 0.24, run: 0.27, bike: 0.12, swim: 1.1 }
 /** Warm-up and cool-down around interval sessions. */
 const WARM_SEC = min(25)
 

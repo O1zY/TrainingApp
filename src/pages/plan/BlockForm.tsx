@@ -5,6 +5,7 @@ import { Field, FieldGroup, NumberInput, Toggle, TextInput, inputClass } from '.
 import { chip } from '../../components/styles'
 import { Card, PageHeader, Segmented } from '../../components/ui'
 import { isBrick, structureSummary } from '../../library/workouts'
+import { brickSets } from '../../plan/bricks'
 import { todayIso } from '../../log/format'
 import { useLog } from '../../log/LogStore'
 import { SPORTS } from '../../log/sports'
@@ -47,6 +48,7 @@ function blankBlock(weekStartsOn: 0 | 1): BlockDraft {
     restDay: undefined,
     benchmarks: [],
     libraryMix: 40,
+    bricksPerWeek: 1,
   }
 }
 
@@ -241,6 +243,18 @@ function Form({ initial, editing }: { initial: BlockDraft; editing: boolean }) {
 
       <Card title="Library and one-offs">
         <div className="space-y-4">
+          {brickSets({ sports: draft.sports, start: draft.start, weeks: draft.weeks }, []).length > 0 && (
+            <Field
+              label="Bricks a week"
+              hint="A brick uses up a session in each sport it covers: a bike–run brick replaces one bike session and one run session, so the week's volume stays the same. Build weeks get this many, taper weeks a short one, deload and race weeks none. They come from your library bricks, or a built-in set."
+            >
+              <select className={inputClass} value={draft.bricksPerWeek ?? 0} onChange={(e) => patch({ bricksPerWeek: Number(e.target.value) })}>
+                <option value={0}>None</option>
+                <option value={1}>1 a week</option>
+                <option value={2}>2 a week</option>
+              </select>
+            </Field>
+          )}
           <Field label={`${draft.libraryMix}% from your library · ${100 - draft.libraryMix}% one-off sessions`} hint="One-offs come from a built-in set that rotates week to week and grows with the block. Benchmarks below are on top of this.">
             <input type="range" min={0} max={100} step={10} value={draft.libraryMix} onChange={(e) => patch({ libraryMix: Number(e.target.value) })} className="w-full accent-[var(--accent)]" />
           </Field>

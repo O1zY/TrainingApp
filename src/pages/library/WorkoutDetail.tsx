@@ -12,12 +12,12 @@ import { useSettings } from '../../settings/SettingsContext'
 import { Stat } from '../log/SessionDetail'
 import { useZoneContext } from '../../markers/useZones'
 
-export function Structure({ w }: { w: Workout }) {
+export function Structure({ w, title }: { w: Workout; title?: string }) {
   const { settings } = useSettings()
   const zones = useZoneContext()
   const groups = groupPieces(w.pieces ?? [])
   return (
-    <Card title={`Structure · ${w.pieces!.length} rep${w.pieces!.length === 1 ? '' : 's'}`}>
+    <Card title={`${title ? `${title} · ` : 'Structure · '}${w.pieces!.length} rep${w.pieces!.length === 1 ? '' : 's'}`}>
       <ol className="divide-y divide-line">
         {groups.map((g) => (
           <li key={g.first} className="flex flex-col gap-1 py-2.5 sm:flex-row sm:items-center sm:justify-between">
@@ -77,16 +77,19 @@ export function Exercises({ w }: { w: Workout }) {
 }
 
 /** One leg of a brick: its sport, what it asks for, and its reps. */
-function Leg({ leg, n, w }: { leg: WorkoutLeg; n: number; w: Workout }) {
+export function Leg({ leg, n, w }: { leg: WorkoutLeg; n: number; w: Workout }) {
   const { settings } = useSettings()
   const zones = useZoneContext()
   const def = SPORTS[leg.sport]
   const lw = legWorkout(leg, w)
   const summary = structureSummary({ ...lw, pieces: undefined }, settings.units, zones)
+  const label = `Leg ${n} · ${def.label}`
+  // A leg that is only reps shows as one card, titled with the leg; otherwise a header card first.
+  if (!summary && !leg.notes && leg.pieces?.length) return <Structure w={lw} title={label} />
   return (
     <div className="space-y-3">
       <Card
-        title={`Leg ${n} · ${def.label}`}
+        title={label}
         action={
           <span className={`grid size-8 place-items-center rounded-lg ${def.soft} ${def.text}`}>
             <def.icon className="size-4" />
@@ -102,7 +105,7 @@ function Leg({ leg, n, w }: { leg: WorkoutLeg; n: number; w: Workout }) {
 }
 
 /** Events logged from a brick. */
-function BrickHistory({ w }: { w: Workout }) {
+export function BrickHistory({ w }: { w: Workout }) {
   const { multisport, sessions } = useLog()
   const events = multisport.filter((m) => m.workoutId === w.id).sort((a, b) => b.date.localeCompare(a.date))
   return (
