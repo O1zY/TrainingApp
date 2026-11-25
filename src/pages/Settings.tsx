@@ -8,7 +8,7 @@ import { StravaConnection } from './log/Strava'
 import { DataCard } from './DataCard'
 import { SyncCard } from './SyncCard'
 import { zonesFromMax } from '../settings/hrZones'
-import { useSettings, type ThemePref, type Units } from '../settings/SettingsContext'
+import { NAME_MAX, useSettings, type ThemePref, type Units } from '../settings/SettingsContext'
 
 function Row({ label, hint, children }: { label: string; hint: string; children: ReactNode }) {
   return (
@@ -46,6 +46,17 @@ export default function Settings() {
       <div className="max-w-2xl space-y-5">
         <Card title="Display">
           <div className="divide-y divide-line">
+            <Row label="Your name" hint="Used in the greeting on Home and the sign-in screen. Saved to your account, so it follows you to every device.">
+              <input
+                type="text"
+                autoComplete="given-name"
+                maxLength={NAME_MAX}
+                value={settings.name ?? ''}
+                onChange={(e) => update({ name: e.target.value })}
+                className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-base sm:w-52 md:text-sm"
+                aria-label="Your name"
+              />
+            </Row>
             <Row label="Theme" hint="System follows your device's light or dark mode.">
               <Segmented<ThemePref>
                 value={settings.theme}
