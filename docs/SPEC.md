@@ -70,7 +70,7 @@ rep drift. HR zones live in Settings (max HR, editable zone tops, default 60/70/
 | Topic | Decision |
 |---|---|
 | Contents | Structure + targets, strength templates by % of 1RM (or fixed weight), tags, description, source/reference |
-| Starter set | An optional set of 23 triathlon/duathlon sessions, added in one tap from the Library page (`src/library/starter.ts`, 25 Nov 2026): Brownlee, Yee and Norwegian-block sessions as published, the three field tests that set the markers (CSS, 20′ FTP, 30′ run), basic easy/long/strength/mobility sessions. Fixed ids, so adding twice or on two devices never duplicates; the offer disappears once any are in. `source` says where each came from and what was scaled |
+| Starter set | An optional set of 26 triathlon/duathlon sessions, added in one tap from the Library page (`src/library/starter.ts`, 25 Nov 2026): Brownlee, Yee and Norwegian-block sessions as published, the three field tests that set the markers (CSS, 20′ FTP, 30′ run), basic easy/long/strength/mobility sessions. Fixed ids, so adding twice or on two devices never duplicates; the offer disappears once any are in. `source` says where each came from and what was scaled |
 | Rep editing | Edited as sets of identical reps (“8 × 500m, 2′ rest”), stored flat as `PieceTemplate`s |
 | Log from template | `/log/new?workout=id` pre-fills targets, rest, the fixed side of each rep (distance *or* time) and % sets turned into kg from the current 1RM (rounded to 2.5kg). The session keeps `workoutId` |
 | Save to library | Any logged session → its structure and targets (not results) |
@@ -302,4 +302,16 @@ rep drift. HR zones live in Settings (max HR, editable zone tops, default 60/70/
 | This week (Home) | Each day is a button; the picked day shows its work, race, planned sessions still to do and what was logged, with "Add session". Open plan goes to that week |
 | Weight | `/log/weight`, from Log › Your numbers. Weigh-ins are the check-in's `weightKg` (one per day, same record as the daily check-in), so nothing new to sync. The 7-day trailing average is the headline (`src/analysis/weight.ts`), single weigh-ins are dots behind it; change over 4 and 12 weeks; optional goal weight (`targetWeightKg` in settings) drawn as a dashed line; ranges 4 wk to all |
 | Starter sessions | See Session library decisions above. Targets are relative (% FTP, offsets against threshold pace or CSS, HR zones), so they resolve from each user's markers |
-| Not done | Brick and multisport sessions as one library item (library workouts are one sport; a brick is a bike and a run workout); open-water swim sets; a weight goal date |
+| Not done | Open-water swim sets; a weight goal date; planning a brick into a training block (see Bricks below) |
+
+## Bricks in the library (25 Nov 2026)
+
+| Topic | Decision |
+|---|---|
+| Model | A library workout can carry `legs` (each a single-sport mini-workout: duration or distance, whole-leg target, reps, notes) and a `brickKind` (brick, duathlon, triathlon, aquathlon, other). Its `sport` is just the first leg's, so old code keeps working; `isBrick()` (`src/library/workouts.ts`) is the test |
+| Making one | Library › New workout › "Brick / multisport": pick the kind (it fills the usual legs while nothing is entered), then edit each leg with the same target and rep editors as a single workout. Or Save to library from a logged multisport event, which copies each leg's structure and targets, not its results. Transitions are never part of a brick: they come from start and finish times when it is logged |
+| Logging | "Log this workout" goes to `/log/multi/new?workout=id`: the event (kind, name) and one session per leg are pre-filled like a single workout, with zones and relative targets turned into numbers from the current markers. The event keeps `workoutId`; the legs don't, so a brick's history counts events. `/log/new?workout=id` for a brick redirects there. Deleting the brick unlinks its events |
+| Library | Bricks have their own icon and a Brick filter, and are kept out of the single-sport filters |
+| Planning | Not yet. The planner's pools and the swap-a-workout pickers skip bricks, since a planned session is one sport with one duration. Planning a brick as one session is the natural next step |
+| Starter set | Three bricks added (Yee's big brick, a bike–run brick, a sprint duathlon rehearsal). People who already added the starter set are offered new starters in a quiet row on the Library page, with Add and Hide; Hide is remembered on that device |
+| Fix | The workout form dropped relative targets (% FTP, vs threshold or CSS) whenever a target was edited; they are now kept |

@@ -3,13 +3,13 @@ import { useState, type FormEvent, type KeyboardEvent } from 'react'
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Chips, Field, NumberInput, Scale, Section, TextArea, TextInput, TimeInput, inputClass } from '../../components/fields'
 import { AimFields, AimToggle } from '../../components/targets'
-import { PageHeader } from '../../components/ui'
-import { allTags, blankWorkout, describeGroup, groupPieces, pieceUnit, roundToPlates, workoutFromSession } from '../../library/workouts'
+import { PageHeader, Segmented } from '../../components/ui'
+import { allTags, blankWorkout, describeGroup, groupPieces, pieceUnit, roundToPlates, workoutFromEvent, workoutFromSession } from '../../library/workouts'
 import { distanceFactor, distanceUnit, formatWeight, newId, weightFactor, weightUnit } from '../../log/format'
 import { useLog, type WorkoutDraft } from '../../log/LogStore'
-import { MAIN_LIFTS, RPE_LABELS, SPORTS, WOD_FORMATS } from '../../log/sports'
+import { LEG_SPORTS, MAIN_LIFTS, MULTISPORT_KINDS, RPE_LABELS, SPORTS, WOD_FORMATS } from '../../log/sports'
 import { findMax } from '../../log/stats'
-import type { ExerciseTemplate, PieceTemplate, SetTemplate, Sport } from '../../log/types'
+import type { ExerciseTemplate, MultisportKind, PieceTemplate, SetTemplate, Sport, WorkoutLeg } from '../../log/types'
 import { useSettings } from '../../settings/SettingsContext'
 import { SportPicker } from '../log/SessionForm'
 
@@ -139,7 +139,7 @@ function RepSetsEditor({ sport, initial, onChange }: { sport: Sport; initial?: P
             </Field>
           </div>
           <input className={`${inputClass} mt-2`} placeholder="Notes, e.g. build each 500m, last one all out" value={s.piece.notes ?? ''} onChange={(e) => updatePiece(i, { notes: e.target.value || undefined })} />
-          <AimToggle sport={sport} value={s.piece} onChange={(a) => updatePiece(i, { target: a.target, hrZone: a.hrZone, targetRate: a.targetRate })} />
+          <AimToggle sport={sport} value={s.piece} onChange={(a) => updatePiece(i, { target: a.target, rel: a.rel, hrZone: a.hrZone, targetRate: a.targetRate })} />
         </div>
       ))}
       <button
@@ -266,6 +266,109 @@ function StrengthTemplateEditor({ exercises, onChange }: { exercises: ExerciseTe
   )
 }
 
+// ---- Brick legs ------------------------------------------------------------------------
+
+const blankLeg = (sport: Sport): WorkoutLeg => ({ id: newId(), sport })
+
+/** The sports a leg can be: the multisport ones, without transitions (those are worked out when logging). */
+const BRICK_SPORTS = LEG_SPORTS.filter((s) => s !== 'transition')
+
+function BrickEditor({ kind, legs, onChange }: { kind: MultisportKind; legs: WorkoutLeg[]; onChange: (kind: MultisportKind, legs: WorkoutLeg[]) => void }) {
+  const { settings } = useSettings()
+  const setLeg = (i: number, p: Partial<WorkoutLeg>) => onChange(kind, legs.map((l, j) => (j === i ? { ...l, ...p } : l)))
+  const move = (i: number, by: number) => {
+    const next = [...legs]
+    const [x] = next.splice(i, 1)
+    next.splice(i + by, 0, x)
+    onChange(kind, next)
+  }
+  const pickKind = (k: MultisportKind | undefined) => {
+    if (!k) return
+    // Switching kind swaps the legs for that kind's usual ones only while nothing has been filled in.
+    const untouched = legs.every((l) => !l.durationSec && !l.distanceM && !l.pieces?.length && !l.target && !l.rel && !l.hrZone && !l.notes)
+    onChange(k, untouched ? MULTISPORT_KINDS.find((x) => x.value === k)!.legs.map(blankLeg) : legs)
+  }
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <p className="mb-2 text-xs font-medium text-muted">What kind of session is it?</p>
+        <Chips value={kind} allowNone={false} options={MULTISPORT_KINDS} onChange={pickKind} />
+      </div>
+      {legs.map((leg, i) => {
+        const def = SPORTS[leg.sport]
+        const unit = distanceUnit(leg.sport, settings.units)
+        return (
+          <section key={leg.id} className="rounded-2xl border border-line bg-surface">
+            <div className="flex items-center gap-3 border-b border-line px-4 py-3">
+              <span className={`grid size-8 place-items-center rounded-lg ${def.soft} ${def.text}`}>
+                <def.icon className="size-4" />
+              </span>
+              <select
+                aria-label="Leg sport"
+                className="min-w-0 flex-1 bg-transparent font-semibold outline-none"
+                value={leg.sport}
+                onChange={(e) => setLeg(i, { sport: e.target.value as Sport, type: undefined, pieces: undefined, target: undefined, rel: undefined, hrZone: undefined, targetRate: undefined, distanceM: undefined })}
+              >
+                {BRICK_SPORTS.map((s) => (
+                  <option key={s} value={s}>
+                    Leg {i + 1} · {SPORTS[s].label}
+                  </option>
+                ))}
+              </select>
+              <span className="flex">
+                {[
+                  { label: 'Move leg up', icon: ArrowUp, onClick: () => move(i, -1), hidden: i === 0 },
+                  { label: 'Move leg down', icon: ArrowDown, onClick: () => move(i, 1), hidden: i === legs.length - 1 },
+                  { label: 'Remove leg', icon: Trash2, onClick: () => onChange(kind, legs.filter((_, j) => j !== i)) },
+                ].map(
+                  ({ label, icon: Icon, onClick, hidden }) =>
+                    !hidden && (
+                      <button key={label} type="button" aria-label={label} onClick={onClick} className="grid size-8 place-items-center rounded-lg text-muted hover:bg-surface-2 hover:text-text">
+                        <Icon className="size-4" />
+                      </button>
+                    ),
+                )}
+              </span>
+            </div>
+            <div className="space-y-4 p-4">
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Duration">
+                  <TimeInput value={leg.durationSec} placeholder="h:mm:ss" onChange={(durationSec) => setLeg(i, { durationSec })} />
+                </Field>
+                <Field label="Distance" unit={unit}>
+                  <NumberInput value={leg.distanceM} factor={distanceFactor(unit)} decimals={unit === 'm' ? 0 : 2} placeholder="—" onChange={(distanceM) => setLeg(i, { distanceM })} />
+                </Field>
+              </div>
+              {leg.sport !== 'other' && (
+                <div>
+                  <p className="mb-2 text-xs font-medium text-muted">Target for the whole leg. Reps below have their own.</p>
+                  <AimFields key={leg.sport} sport={leg.sport} value={leg} onChange={(a) => setLeg(i, { target: a.target, rel: a.rel, hrZone: a.hrZone, targetRate: a.targetRate })} />
+                </div>
+              )}
+              {SPORTS[leg.sport].pieces && (
+                <div>
+                  <p className="mb-2 text-xs font-medium text-muted">Reps in this leg (optional)</p>
+                  <RepSetsEditor key={`${leg.id}-${leg.sport}`} sport={leg.sport} initial={leg.pieces} onChange={(pieces) => setLeg(i, { pieces })} />
+                </div>
+              )}
+              <input className={inputClass} placeholder="Notes for this leg, e.g. straight off the bike, 180° turn" value={leg.notes ?? ''} onChange={(e) => setLeg(i, { notes: e.target.value || undefined })} />
+            </div>
+          </section>
+        )
+      })}
+      <div className="flex flex-wrap items-center gap-2">
+        {BRICK_SPORTS.filter((s) => s !== 'row' && s !== 'erg').map((s) => (
+          <button key={s} type="button" onClick={() => onChange(kind, [...legs, blankLeg(s)])} className="inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-2 text-sm font-semibold hover:bg-surface-2">
+            <Plus className="size-4" /> Add {SPORTS[s].label.toLowerCase()} leg
+          </button>
+        ))}
+      </div>
+      <p className="text-xs text-muted">Transitions between legs are worked out from start and finish times when you log it, so they aren’t part of the plan.</p>
+    </div>
+  )
+}
+
 // ---- Whole form -----------------------------------------------------------------------
 
 function Form({ initial, editing }: { initial: WorkoutDraft; editing: boolean }) {
@@ -277,18 +380,49 @@ function Form({ initial, editing }: { initial: WorkoutDraft; editing: boolean })
   const def = SPORTS[draft.sport]
   const unit = distanceUnit(draft.sport, settings.units)
   const strength = draft.sport === 'strength'
+  const brick = !!draft.legs
+  const noLegs = brick && !draft.legs!.length
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
-    const saved = saveWorkout({ ...draft, name: draft.name.trim() || 'Untitled workout' })
+    const name = draft.name.trim() || 'Untitled workout'
+    // A brick keeps only what belongs to it: legs, name, tags, RPE and notes. Its sport is the first leg's.
+    const saved = saveWorkout(
+      brick
+        ? {
+            ...draft,
+            name,
+            sport: draft.legs![0]?.sport ?? 'other',
+            type: undefined,
+            durationSec: undefined,
+            distanceM: undefined,
+            target: undefined,
+            rel: undefined,
+            hrZone: undefined,
+            targetRate: undefined,
+            pieces: undefined,
+            exercises: undefined,
+            wod: undefined,
+          }
+        : { ...draft, name, legs: undefined, brickKind: undefined },
+    )
     navigate(`/library/${saved.id}`, { replace: true })
   }
 
   return (
     <form onSubmit={submit} className="space-y-5 pb-24">
-      <SportPicker value={draft.sport} multisport={false} onPick={(sport) => patch({ sport, type: undefined })} />
+      <Segmented
+        value={brick ? 'brick' : 'single'}
+        options={[
+          { value: 'single', label: 'One sport' },
+          { value: 'brick', label: 'Brick / multisport' },
+        ]}
+        onChange={(v) => (v === 'brick' ? !brick && patch({ legs: MULTISPORT_KINDS[3].legs.map(blankLeg), brickKind: 'brick' }) : patch({ legs: undefined, brickKind: undefined }))}
+      />
 
-      {def.types.length > 0 && <Chips value={draft.type} options={def.types} onChange={(type) => patch({ type, ...((type === 'wod' || type === 'mixed') && !draft.wod ? { wod: { format: 'amrap' } } : {}) })} />}
+      {!brick && <SportPicker value={draft.sport} multisport={false} onPick={(sport) => patch({ sport, type: undefined })} />}
+
+      {!brick && def.types.length > 0 && <Chips value={draft.type} options={def.types} onChange={(type) => patch({ type, ...((type === 'wod' || type === 'mixed') && !draft.wod ? { wod: { format: 'amrap' } } : {}) })} />}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Field label="Name" className="sm:col-span-2">
@@ -305,7 +439,20 @@ function Form({ initial, editing }: { initial: WorkoutDraft; editing: boolean })
         </Field>
       </div>
 
-      <Section title="Session plan" summary="Duration, distance, target, RPE" defaultOpen={!def.pieces || !!(draft.durationSec || draft.distanceM || draft.target || draft.hrZone)}>
+      {brick && (
+        <>
+          <Section title="Legs" defaultOpen summary={`${draft.legs!.length} leg${draft.legs!.length === 1 ? '' : 's'}`}>
+            <BrickEditor kind={draft.brickKind ?? 'brick'} legs={draft.legs!} onChange={(brickKind, legs) => patch({ brickKind, legs })} />
+          </Section>
+          <Section title="Effort" summary="Target RPE" defaultOpen={!!draft.rpe}>
+            <Field label="Target RPE">
+              <Scale value={draft.rpe} onChange={(rpe) => patch({ rpe })} low="Very easy" high="Max" describe={(v) => RPE_LABELS[v]} />
+            </Field>
+          </Section>
+        </>
+      )}
+
+      {!brick && <Section title="Session plan" summary="Duration, distance, target, RPE" defaultOpen={!def.pieces || !!(draft.durationSec || draft.distanceM || draft.target || draft.hrZone)}>
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <Field label="Duration">
@@ -320,28 +467,28 @@ function Form({ initial, editing }: { initial: WorkoutDraft; editing: boolean })
           {!strength && draft.sport !== 'recovery' && draft.sport !== 'other' && (
             <div>
               <p className="mb-2 text-xs font-medium text-muted">Whole-session target, mainly for steady work (e.g. Z2 at r18). Reps have their own below.</p>
-              <AimFields sport={draft.sport} value={draft} onChange={(a) => patch({ target: a.target, hrZone: a.hrZone, targetRate: a.targetRate })} />
+              <AimFields sport={draft.sport} value={draft} onChange={(a) => patch({ target: a.target, rel: a.rel, hrZone: a.hrZone, targetRate: a.targetRate })} />
             </div>
           )}
           <Field label="Target RPE">
             <Scale value={draft.rpe} onChange={(rpe) => patch({ rpe })} low="Very easy" high="Max" describe={(v) => RPE_LABELS[v]} />
           </Field>
         </div>
-      </Section>
+      </Section>}
 
-      {def.pieces && (
+      {!brick && def.pieces && (
         <Section title="Reps" defaultOpen summary={draft.pieces?.length ? `${draft.pieces.length} reps` : 'Intervals and pieces'}>
           <RepSetsEditor key={draft.sport} sport={draft.sport} initial={draft.pieces} onChange={(pieces) => patch({ pieces })} />
         </Section>
       )}
 
-      {strength && draft.type !== 'wod' && (
+      {!brick && strength && draft.type !== 'wod' && (
         <Section title="Exercises" defaultOpen summary={draft.exercises?.length ? `${draft.exercises.length} exercises` : undefined}>
           <StrengthTemplateEditor exercises={draft.exercises ?? []} onChange={(exercises) => patch({ exercises })} />
         </Section>
       )}
 
-      {strength &&
+      {!brick && strength &&
         (draft.wod ? (
           <Section title="WOD" defaultOpen>
             <div className="space-y-3">
@@ -372,7 +519,7 @@ function Form({ initial, editing }: { initial: WorkoutDraft; editing: boolean })
           <button type="button" onClick={() => navigate(-1)} className="rounded-lg border border-line px-4 py-2.5 text-sm font-semibold hover:bg-surface-2">
             Cancel
           </button>
-          <button type="submit" className="rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-on-accent hover:opacity-90">
+          <button type="submit" disabled={noLegs} className="rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-on-accent hover:opacity-90 disabled:opacity-40">
             {editing ? 'Save changes' : 'Save to library'}
           </button>
         </div>
@@ -383,12 +530,15 @@ function Form({ initial, editing }: { initial: WorkoutDraft; editing: boolean })
 
 export function NewWorkout() {
   const [params] = useSearchParams()
-  const { sessions } = useLog()
+  const { sessions, multisport } = useLog()
   const from = sessions.find((s) => s.id === params.get('from'))
+  const event = multisport.find((m) => m.id === params.get('fromEvent'))
+  const eventLegs = event ? event.legIds.map((id) => sessions.find((s) => s.id === id)).filter((s): s is NonNullable<typeof s> => !!s) : []
+  const initial = event ? workoutFromEvent(event, eventLegs) : from ? workoutFromSession(from) : blankWorkout()
   return (
     <>
-      <PageHeader title="New workout" subtitle={from ? 'Saved from a logged session: its structure and targets, not its results.' : 'A reusable session for the library'} />
-      <Form key={params.toString()} initial={from ? workoutFromSession(from) : blankWorkout()} editing={false} />
+      <PageHeader title="New workout" subtitle={from || event ? 'Saved from a logged session: its structure and targets, not its results.' : 'A reusable session for the library'} />
+      <Form key={params.toString()} initial={initial} editing={false} />
     </>
   )
 }

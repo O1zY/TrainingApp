@@ -128,6 +128,7 @@ export function LogProvider({ children }: { children: ReactNode }) {
         ...d,
         workouts: d.workouts.filter((w) => w.id !== id),
         sessions: d.sessions.map((s) => (s.workoutId === id ? { ...s, workoutId: undefined } : s)),
+        multisport: d.multisport.map((m) => (m.workoutId === id ? { ...m, workoutId: undefined } : m)),
       }))
     },
 
