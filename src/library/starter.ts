@@ -1,4 +1,4 @@
-import type { ExerciseTemplate, PieceTemplate, Sport, Workout } from '../log/types'
+import type { ExerciseTemplate, MultisportKind, PieceTemplate, Sport, Workout, WorkoutLeg } from '../log/types'
 
 // A starter set of triathlon / duathlon sessions, offered from the Library page.
 //
@@ -41,10 +41,30 @@ interface Def {
   durationSec?: number
   distanceM?: number
   pieces?: Piece[]
+  /** A brick or multisport workout: its legs in order. `sport` is then the first leg's. */
+  legs?: (Omit<WorkoutLeg, 'id' | 'pieces'> & { pieces?: Piece[] })[]
+  brickKind?: MultisportKind
   exercises?: Omit<ExerciseTemplate, 'id'>[]
 }
 
 const min = (m: number) => m * 60
+
+/** The ride half of Yee's brick, shared by the bike workout and the full brick. */
+const YEE_BIKE: Piece[] = [
+  { durationSec: 60, restSec: 60, rel: { lo: 91, hi: 98 }, notes: 'L4−' },
+  { durationSec: 60, restSec: 60, rel: { lo: 100, hi: 105 }, notes: 'L4+' },
+  { durationSec: 60, restSec: 90, rel: { lo: 106, hi: 120 }, notes: 'L5' },
+  ...[90, 90, 90, 60].map((rest): Piece => ({ durationSec: 10, restSec: rest, rel: { lo: 150 }, notes: 'Sprint' })),
+  { durationSec: min(3), restSec: min(15), rel: { lo: 90, hi: 100 }, notes: 'L3+, then 15′ very easy' },
+  { durationSec: min(3.5), rel: { lo: 106, hi: 120 }, notes: 'L5, a solid closing effort' },
+  { durationSec: min(90), rel: { lo: 76, hi: 90 }, notes: 'L3, cruising in the bunch' },
+]
+
+/** The run half: 2 km at threshold, then 1 km faster. */
+const YEE_RUN: Piece[] = [
+  { distanceM: 2000, rel: { lo: -3, hi: 3 }, notes: 'Threshold, with a 180° turn' },
+  { distanceM: 1000, rel: { hi: -8 }, notes: 'Pick it up' },
+]
 
 const DEFS: Def[] = [
   // ---- Swim ------------------------------------------------------------------------------
@@ -189,15 +209,7 @@ const DEFS: Def[] = [
     description:
       'The ride half of Alex Yee’s big brick, done in the build to the Paris Olympics (91 km, 2 h 24 on Strava). Draft-legal racing has sprints to get into bunches, solid efforts to close gaps and stretches of cruising; this has all three.\n\nFull session: 60′ warm-up, then the pieces below in order, with 15′ very easy after the 3′ tempo effort and a cool-down of about 26′ to finish; then run straight off (Run › Yee brick run). The rep structure is his; the watts are set against your FTP, and the long blocks scale with your event, so cut the 90′ to 45′ for a sprint-distance build.\n\nIntensity levels are the writer’s own (Coggan-style): L4 about 91–105% of FTP, L5 106–120%, L3 76–90%.',
     source: SRC.yee,
-    pieces: [
-      { durationSec: 60, restSec: 60, rel: { lo: 91, hi: 98 }, notes: 'L4−' },
-      { durationSec: 60, restSec: 60, rel: { lo: 100, hi: 105 }, notes: 'L4+' },
-      { durationSec: 60, restSec: 90, rel: { lo: 106, hi: 120 }, notes: 'L5' },
-      ...[90, 90, 90, 60].map((rest): Piece => ({ durationSec: 10, restSec: rest, rel: { lo: 150 }, notes: 'Sprint' })),
-      { durationSec: min(3), restSec: min(15), rel: { lo: 90, hi: 100 }, notes: 'L3+, then 15′ very easy' },
-      { durationSec: min(3.5), rel: { lo: 106, hi: 120 }, notes: 'L5, a solid closing effort' },
-      { durationSec: min(90), rel: { lo: 76, hi: 90 }, notes: 'L3, cruising in the bunch' },
-    ],
+    pieces: YEE_BIKE,
   },
   {
     slug: 'bike-easy-90',
@@ -259,10 +271,7 @@ const DEFS: Def[] = [
     description:
       'The run Alex Yee went straight into off his big brick ride: 2 km at threshold, with a dead 180° turn in it to practise the tight turns of World Series courses, then 1 km faster, then a 10′ cool-down. Start it within a couple of minutes of racking the bike. Do it after a hard ride (Bike › Yee brick: the bike), or as a short brick after any ride.',
     source: SRC.yee,
-    pieces: [
-      { distanceM: 2000, rel: { lo: -3, hi: 3 }, notes: 'Threshold, with a 180° turn' },
-      { distanceM: 1000, rel: { hi: -8 }, notes: 'Pick it up' },
-    ],
+    pieces: YEE_RUN,
   },
   {
     slug: 'run-norway-5x5',
@@ -310,6 +319,57 @@ const DEFS: Def[] = [
     source: BASIC,
     durationSec: min(90),
     hrZone: 2,
+  },
+
+  // ---- Bricks and multisport -------------------------------------------------------------
+  {
+    slug: 'brick-yee-big-brick',
+    name: 'Yee big brick: 3½ h ride + run',
+    sport: 'bike',
+    type: 'intervals',
+    rpe: 8,
+    tags: ['yee', 'brick', 'race-sim'],
+    brickKind: 'brick',
+    description:
+      'Alex Yee’s big brick from the build to the Paris Olympics, as one session: the ride with its sprints, solid efforts and long cruise, then a run straight off the bike. Log it and you get a bike leg and a run leg with the transition between them worked out from the times.\n\nThe rep structure is his; the watts and paces are set against your FTP and threshold, and the long blocks scale with your event: for a sprint-distance build, cut the 90′ block to 45′. Full ride: 60′ warm-up, the pieces in order with 15′ very easy after the 3′ tempo effort, and about 26′ of cool-down. Then 2 km at threshold with a dead 180° turn in it, 1 km faster, and a 10′ cool-down. The same two halves are in the library on their own (Yee brick: the bike, Yee brick run).',
+    source: SRC.yee,
+    legs: [
+      { sport: 'bike', type: 'intervals', pieces: YEE_BIKE, notes: '60′ warm-up first; 15′ very easy after the 3′ effort; about 26′ cool-down' },
+      { sport: 'run', type: 'intervals', pieces: YEE_RUN, notes: 'Straight off the bike, then a 10′ cool-down' },
+    ],
+  },
+  {
+    slug: 'brick-bike-run-basic',
+    name: 'Brick: tempo ride + 10′ run',
+    sport: 'bike',
+    type: 'intervals',
+    rpe: 6,
+    tags: ['brick'],
+    brickKind: 'brick',
+    description:
+      'The everyday brick: a steady-hard ride, then a short run straight off it to practise the change of legs. Warm up 15′ on the bike. Three 8′ blocks at tempo with 2′ easy between, then rack the bike and run 10′ at a steady effort. The first kilometre will feel awkward, which is the point; settle into a rhythm rather than chasing pace. Cool down with 5′ walking.',
+    source: 'Basic session; the shape (hard-ish ride, short run straight after) is the standard brick.',
+    legs: [
+      { sport: 'bike', type: 'tempo', pieces: reps(3, { durationSec: min(8), restSec: min(2), rel: { lo: 80, hi: 90 } }) },
+      { sport: 'run', type: 'tempo', durationSec: min(10), hrZone: 3, notes: 'Straight off the bike, steady' },
+    ],
+  },
+  {
+    slug: 'brick-sprint-duathlon',
+    name: 'Sprint duathlon rehearsal: 5 km / 20 km / 2.5 km',
+    sport: 'run',
+    type: 'race',
+    rpe: 8,
+    tags: ['duathlon', 'race-sim'],
+    brickKind: 'duathlon',
+    description:
+      'A full rehearsal at the standard sprint-duathlon distances (5 km run, 20 km bike, 2.5 km run). Keep the first run controlled so the second still has something in it, hold the bike at a steady-hard effort you could repeat, and run the last 2.5 km as the race: the aim is a second run that is no more than a few seconds a kilometre slower than the first.\n\nThe targets are a starting point, not a published session. Practise your transitions too: shoes, helmet and a clean, quick bike rack.',
+    source: 'Basic session. Distances are the standard sprint duathlon; the targets are a starting point.',
+    legs: [
+      { sport: 'run', type: 'race', distanceM: 5000, hrZone: 4, notes: 'Controlled: do not start too fast' },
+      { sport: 'bike', type: 'race', distanceM: 20000, rel: { lo: 85, hi: 95 }, notes: 'Steady-hard, then ease the last 2 minutes to spin the legs out' },
+      { sport: 'run', type: 'race', distanceM: 2500, hrZone: 4, notes: 'Run it as the race' },
+    ],
   },
 
   // ---- Strength and recovery -------------------------------------------------------------
@@ -378,6 +438,8 @@ function build(d: Def): Workout {
     distanceM: d.distanceM,
     hrZone: d.hrZone,
     pieces: d.pieces?.map((p, i) => ({ ...p, id: `${id}-p${i}` })),
+    legs: d.legs?.map((l, i) => ({ ...l, id: `${id}-l${i}`, pieces: l.pieces?.map((p, j) => ({ ...p, id: `${id}-l${i}-p${j}` })) })),
+    brickKind: d.brickKind,
     exercises: d.exercises?.map((e, i) => ({ ...e, id: `${id}-e${i}`, sets: e.sets.map((s, j) => ({ ...s, id: `${id}-e${i}-s${j}` })) })),
     source: d.source,
     createdAt: STARTER_AT,

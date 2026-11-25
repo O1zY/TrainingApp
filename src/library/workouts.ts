@@ -1,10 +1,10 @@
 import { blankSession } from '../log/drafts'
 import { distanceUnit, formatDistance, formatTime, newId } from '../log/format'
 import type { SessionDraft, WorkoutDraft } from '../log/LogStore'
-import { WOD_FORMATS, sessionName } from '../log/sports'
+import { SPORTS, WOD_FORMATS, sessionName } from '../log/sports'
 import { findMax } from '../log/stats'
 import { describeAim } from '../log/targets'
-import type { Aim, OneRepMax, PieceTemplate, Session, Sport, Workout } from '../log/types'
+import type { Aim, Multisport, OneRepMax, PieceTemplate, Session, Sport, Workout, WorkoutLeg } from '../log/types'
 import { fixAim, type ZoneContext } from '../markers/zones'
 import type { Units } from '../settings/SettingsContext'
 
@@ -63,6 +63,35 @@ export function sessionFromWorkout(w: Workout, maxes: OneRepMax[], date?: string
   }
 }
 
+// ---- Bricks ------------------------------------------------------------------
+
+/** A brick or multisport workout: several sports, in order, instead of one structure. */
+export const isBrick = (w: Pick<Workout, 'legs'>) => !!w.legs?.length
+
+/** A leg as a stand-alone workout, so the single-sport helpers (summaries, pre-filling a log) work on it. */
+export const legWorkout = (l: WorkoutLeg, w: Pick<Workout, 'name'>): Workout => ({ ...l, name: w.name, tags: [], createdAt: '', updatedAt: '' })
+
+/**
+ * The multisport event a brick pre-fills: its kind and name, and one session per leg with the
+ * fixed parts and targets filled in (as for a single workout). The event keeps `workoutId`; the legs
+ * don't, so the brick's history counts events, not legs.
+ */
+export function eventFromBrick(w: Workout, maxes: OneRepMax[], date: string, ctx?: ZoneContext) {
+  const legs = (w.legs ?? []).map((l) => ({ ...sessionFromWorkout(legWorkout(l, w), maxes, date, ctx), workoutId: undefined, title: undefined, startTime: undefined }))
+  return { event: { kind: w.brickKind ?? 'brick', date, title: w.name, workoutId: w.id }, legs }
+}
+
+/** Turns a logged multisport event into a library brick: each leg's structure and targets, not its results. */
+export function workoutFromEvent(m: Multisport, legSessions: Session[]): WorkoutDraft {
+  const legs: WorkoutLeg[] = legSessions
+    .filter((s) => s.sport !== 'transition')
+    .map((s) => {
+      const d = workoutFromSession(s)
+      return { id: newId(), sport: d.sport, type: d.type, ...aimOf(d), durationSec: d.durationSec, distanceM: d.distanceM, pieces: d.pieces }
+    })
+  return { name: m.title || `${m.kind[0].toUpperCase()}${m.kind.slice(1)}`, sport: legs[0]?.sport ?? 'other', tags: [], legs, brickKind: m.kind }
+}
+
 /** Turns a logged session into a library workout: its structure and targets, not its results. */
 export function workoutFromSession(s: Session): WorkoutDraft {
   const steady = !s.pieces?.length
@@ -106,6 +135,7 @@ export function copyWorkout(w: Workout): WorkoutDraft {
     name: `${w.name} (copy)`,
     pieces: w.pieces?.map((p) => ({ ...p, id: newId() })),
     exercises: w.exercises?.map((e) => ({ ...e, id: newId(), sets: e.sets.map((s) => ({ ...s, id: newId() })) })),
+    legs: w.legs?.map((l) => ({ ...l, id: newId(), pieces: l.pieces?.map((p) => ({ ...p, id: newId() })) })),
   }
 }
 
@@ -146,6 +176,7 @@ export function describeGroup(g: { count: number; piece: PieceTemplate }, sport:
 
 /** One line for library cards. */
 export function structureSummary(w: Workout, units: Units, ctx?: ZoneContext): string {
+  if (w.legs?.length) return w.legs.map((l) => [SPORTS[l.sport].label, structureSummary(legWorkout(l, w), units, ctx)].filter(Boolean).join(' ')).join(' → ')
   if (w.pieces?.length) {
     const groups = groupPieces(w.pieces)
     const lengths = groups.map((g) => pieceLength(g.piece, w.sport, units))

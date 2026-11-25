@@ -3,7 +3,7 @@ import { useState, type FormEvent } from 'react'
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Chips, Field, FieldGroup, TextArea, TextInput, TimeInput, inputClass } from '../../components/fields'
 import { Card, PageHeader, Segmented } from '../../components/ui'
-import { formatPlanTime, structureSummary } from '../../library/workouts'
+import { formatPlanTime, isBrick, structureSummary } from '../../library/workouts'
 import { formatDate, todayIso } from '../../log/format'
 import { useLog } from '../../log/LogStore'
 import { SPORTS, WOD_FORMATS, sessionName } from '../../log/sports'
@@ -57,7 +57,7 @@ function SourceCard({ p }: { p: PlannedSession }) {
   const { settings } = useSettings()
   const zones = useZoneContext()
   const navigate = useNavigate()
-  const options = workouts.filter((w) => w.sport === p.sport && w.id !== p.workoutId).sort((a, b) => a.name.localeCompare(b.name))
+  const options = workouts.filter((w) => !isBrick(w) && w.sport === p.sport && w.id !== p.workoutId).sort((a, b) => a.name.localeCompare(b.name))
   const lib = p.workoutId ? workouts.find((w) => w.id === p.workoutId) : undefined
 
   const swap = (id: string) => {
@@ -247,7 +247,7 @@ function PlannedForm({ initial, editing }: { initial: PlannedDraft; editing: boo
   const [draft, setDraft] = useState(initial)
   const [source, setSource] = useState<'library' | 'oneoff'>(initial.workoutId ? 'library' : 'oneoff')
   const patch = (p: Partial<PlannedDraft>) => setDraft((d) => ({ ...d, ...p }))
-  const options = workouts.filter((w) => w.sport === draft.sport).sort((a, b) => a.name.localeCompare(b.name))
+  const options = workouts.filter((w) => !isBrick(w) && w.sport === draft.sport).sort((a, b) => a.name.localeCompare(b.name))
   const lib = workouts.find((w) => w.id === draft.workoutId && w.sport === draft.sport)
   const structured = !!(draft.oneOff?.pieces?.length || draft.oneOff?.exercises?.length || draft.oneOff?.wod)
 

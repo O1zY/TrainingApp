@@ -4,7 +4,7 @@ import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { Field, FieldGroup, NumberInput, Toggle, TextInput, inputClass } from '../../components/fields'
 import { chip } from '../../components/styles'
 import { Card, PageHeader, Segmented } from '../../components/ui'
-import { structureSummary } from '../../library/workouts'
+import { isBrick, structureSummary } from '../../library/workouts'
 import { todayIso } from '../../log/format'
 import { useLog } from '../../log/LogStore'
 import { SPORTS } from '../../log/sports'
@@ -99,7 +99,7 @@ function Form({ initial, editing }: { initial: BlockDraft; editing: boolean }) {
   const count = (k: string) => weeks.filter((w) => w.kind === k).length
   const perWeek = draft.sports.filter((s) => s.sport !== 'recovery').reduce((a, s) => a + s.sessions, 0)
   const hard = draft.sports.reduce((a, s) => a + s.key, 0)
-  const candidates = workouts.filter((w) => draft.sports.some((s) => s.sport === w.sport)).sort((a, b) => a.sport.localeCompare(b.sport) || a.name.localeCompare(b.name))
+  const candidates = workouts.filter((w) => !isBrick(w) && draft.sports.some((s) => s.sport === w.sport)).sort((a, b) => a.sport.localeCompare(b.sport) || a.name.localeCompare(b.name))
   const missing = PLAN_SPORTS.filter((s) => !draft.sports.some((x) => x.sport === s))
 
   const submit = (e: FormEvent) => {

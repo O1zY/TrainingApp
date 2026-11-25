@@ -1,13 +1,13 @@
-import { ArrowLeft, Copy, ExternalLink, Pencil, Play, Trash2 } from 'lucide-react'
+import { ArrowLeft, Copy, ExternalLink, Pencil, Play, Trash2, Waypoints } from 'lucide-react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { Card } from '../../components/ui'
-import { copyWorkout, describeGroup, formatPlanTime, groupPieces, plannedTotals, roundToPlates } from '../../library/workouts'
+import { copyWorkout, describeGroup, formatPlanTime, groupPieces, isBrick, legWorkout, plannedTotals, roundToPlates, structureSummary } from '../../library/workouts'
 import { distanceUnit, formatDate, formatDistance, formatWeight, weightUnit } from '../../log/format'
 import { useLog } from '../../log/LogStore'
-import { RPE_LABELS, SPORTS, WOD_FORMATS } from '../../log/sports'
-import { findMax, sortSessions } from '../../log/stats'
+import { RPE_LABELS, SPORTS, WOD_FORMATS, eventName, kindLabel } from '../../log/sports'
+import { findMax, multisportTimeline, sortSessions } from '../../log/stats'
 import { describeAim, summariseTargets } from '../../log/targets'
-import type { Workout } from '../../log/types'
+import type { Workout, WorkoutLeg } from '../../log/types'
 import { useSettings } from '../../settings/SettingsContext'
 import { Stat } from '../log/SessionDetail'
 import { useZoneContext } from '../../markers/useZones'
@@ -76,6 +76,58 @@ export function Exercises({ w }: { w: Workout }) {
   )
 }
 
+/** One leg of a brick: its sport, what it asks for, and its reps. */
+function Leg({ leg, n, w }: { leg: WorkoutLeg; n: number; w: Workout }) {
+  const { settings } = useSettings()
+  const zones = useZoneContext()
+  const def = SPORTS[leg.sport]
+  const lw = legWorkout(leg, w)
+  const summary = structureSummary({ ...lw, pieces: undefined }, settings.units, zones)
+  return (
+    <div className="space-y-3">
+      <Card
+        title={`Leg ${n} · ${def.label}`}
+        action={
+          <span className={`grid size-8 place-items-center rounded-lg ${def.soft} ${def.text}`}>
+            <def.icon className="size-4" />
+          </span>
+        }
+      >
+        {summary ? <p className="tabular font-semibold">{summary}</p> : !leg.pieces?.length && <p className="text-sm text-muted">No target set.</p>}
+        {leg.notes && <p className="mt-1 text-sm text-muted">{leg.notes}</p>}
+      </Card>
+      {leg.pieces?.length ? <Structure w={lw} /> : null}
+    </div>
+  )
+}
+
+/** Events logged from a brick. */
+function BrickHistory({ w }: { w: Workout }) {
+  const { multisport, sessions } = useLog()
+  const events = multisport.filter((m) => m.workoutId === w.id).sort((a, b) => b.date.localeCompare(a.date))
+  return (
+    <Card title={`Logged ${events.length}×`}>
+      {events.length ? (
+        <ul className="-mx-2">
+          {events.slice(0, 10).map((m) => {
+            const { totalSec } = multisportTimeline(m.legIds.map((id) => sessions.find((s) => s.id === id)).filter((s): s is NonNullable<typeof s> => !!s))
+            return (
+              <li key={m.id}>
+                <Link to={`/log/multi/${m.id}`} className="flex items-center justify-between gap-3 rounded-lg px-2 py-2 text-sm hover:bg-surface-2">
+                  <span className="font-medium">{formatDate(m.date, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                  <span className="tabular text-muted">{[eventName(m), totalSec != null && formatPlanTime(Math.round(totalSec))].filter(Boolean).join(' · ')}</span>
+                </Link>
+              </li>
+            )
+          })}
+        </ul>
+      ) : (
+        <p className="text-sm text-muted">Not logged yet. Each time you log it, it shows here so you can compare attempts.</p>
+      )}
+    </Card>
+  )
+}
+
 export function History({ w }: { w: Workout }) {
   const { sessions } = useLog()
   const { settings } = useSettings()
@@ -114,8 +166,9 @@ export default function WorkoutDetail() {
   const w = workouts.find((x) => x.id === id)
   if (!w) return <Navigate to="/library" replace />
 
+  const brick = isBrick(w)
   const def = SPORTS[w.sport]
-  const type = def.types.find((t) => t.value === w.type)?.label
+  const type = brick ? `${kindLabel(w.brickKind ?? 'brick')} · ${w.legs!.length} leg${w.legs!.length === 1 ? '' : 's'}` : def.types.find((t) => t.value === w.type)?.label
   const totals = plannedTotals(w)
   const unit = w.pieces?.length && w.sport !== 'bike' ? 'm' : distanceUnit(w.sport, settings.units)
   const aim = describeAim(w, w.sport, settings.units, zones)
@@ -140,12 +193,12 @@ export default function WorkoutDetail() {
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-3">
-          <span className={`grid size-12 shrink-0 place-items-center rounded-xl ${def.soft} ${def.text}`}>
-            <def.icon className="size-6" />
+          <span className={`grid size-12 shrink-0 place-items-center rounded-xl ${brick ? 'bg-accent-soft text-accent-strong' : `${def.soft} ${def.text}`}`}>
+            {brick ? <Waypoints className="size-6" /> : <def.icon className="size-6" />}
           </span>
           <div>
             <h1 className="text-2xl font-bold tracking-tight">{w.name}</h1>
-            <p className="text-sm text-muted">{[def.label, type].filter(Boolean).join(' · ')}</p>
+            <p className="text-sm text-muted">{[brick ? undefined : def.label, type].filter(Boolean).join(' · ')}</p>
             {w.tags.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-1">
                 {w.tags.map((t) => (
@@ -171,7 +224,7 @@ export default function WorkoutDetail() {
       </div>
 
       <Link
-        to={`/log/new?workout=${w.id}`}
+        to={brick ? `/log/multi/new?workout=${w.id}` : `/log/new?workout=${w.id}`}
         className="flex items-center justify-center gap-2 rounded-xl bg-accent px-4 py-3.5 font-semibold text-on-accent hover:opacity-90 sm:inline-flex sm:w-auto"
       >
         <Play className="size-4" /> Log this workout
@@ -205,6 +258,9 @@ export default function WorkoutDetail() {
         </Card>
       )}
 
+      {w.legs?.map((l, i) => (
+        <Leg key={l.id} leg={l} n={i + 1} w={w} />
+      ))}
       {w.pieces?.length ? <Structure w={w} /> : null}
       {w.exercises?.length ? <Exercises w={w} /> : null}
       {w.wod && (
@@ -217,7 +273,7 @@ export default function WorkoutDetail() {
         </Card>
       )}
 
-      <History w={w} />
+      {brick ? <BrickHistory w={w} /> : <History w={w} />}
     </div>
   )
 }

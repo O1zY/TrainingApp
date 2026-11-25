@@ -164,8 +164,9 @@ function fill(input: PlanInput, week: PlanWeek, slot: Slot, rand: () => number, 
   const { block, workouts } = input
   const bs = block.sports.find((s) => s.sport === slot.sport)
   const easyMin = (bs?.easyMin ?? 45) * (slot.long ? 1.5 : 1)
-  const library = workouts.filter((w) => w.sport === slot.sport)
-  const benchmarks = block.benchmarks.map((id) => workouts.find((w) => w.id === id)).filter((w): w is Workout => !!w && w.sport === slot.sport)
+  // Bricks span sports, so a single-sport slot can't use them.
+  const library = workouts.filter((w) => w.sport === slot.sport && !w.legs?.length)
+  const benchmarks = block.benchmarks.map((id) => workouts.find((w) => w.id === id)).filter((w): w is Workout => !!w && w.sport === slot.sport && !w.legs?.length)
   // Tests are kept for the deload check-in; other benchmarks repeat in the build weeks.
   const buildBenchmarks = benchmarks.filter((w) => !isTest(w) && workoutIntensity(w) === slot.intensity)
   const fromLibrary = (w: Workout, benchmark = false): Filled => {

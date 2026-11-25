@@ -142,6 +142,8 @@ export interface Multisport {
   /** Leg session ids in race order. */
   legIds: string[]
   race?: boolean
+  /** Library brick this event was logged from. */
+  workoutId?: string
   notes?: string
   createdAt: string
   updatedAt: string
@@ -226,7 +228,22 @@ export interface ExerciseTemplate {
   notes?: string
 }
 
-/** A reusable session in the library. Logging from it pre-fills a Session. */
+/** One leg of a brick or multisport workout: a single-sport session with its own structure and targets. */
+export interface WorkoutLeg extends Aim {
+  id: string
+  sport: Sport
+  type?: string
+  durationSec?: number
+  distanceM?: number
+  pieces?: PieceTemplate[]
+  notes?: string
+}
+
+/**
+ * A reusable session in the library. Logging from it pre-fills a Session.
+ * A brick (or duathlon, triathlon…) has `legs` instead of a structure of its own; its `sport` is
+ * then just the first leg's, and the library treats it as multisport.
+ */
 export interface Workout extends Aim {
   id: string
   name: string
@@ -241,6 +258,10 @@ export interface Workout extends Aim {
   pieces?: PieceTemplate[]
   exercises?: ExerciseTemplate[]
   wod?: Pick<Wod, 'format' | 'description' | 'timeCapSec'>
+  /** Legs in order, for a brick or multisport workout. */
+  legs?: WorkoutLeg[]
+  /** What kind of multisport event the legs make: brick, duathlon, triathlon… */
+  brickKind?: MultisportKind
   /** Where it comes from: a paper, coach, book or link. */
   source?: string
   createdAt: string

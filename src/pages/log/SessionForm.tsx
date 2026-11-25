@@ -2,7 +2,7 @@ import { BookOpen, CalendarCheck, Repeat, Waypoints } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { PageHeader } from '../../components/ui'
-import { sessionFromWorkout } from '../../library/workouts'
+import { isBrick, sessionFromWorkout } from '../../library/workouts'
 import { blankSession, copyOf } from '../../log/drafts'
 import { formatDate } from '../../log/format'
 import { useLog, type SessionDraft } from '../../log/LogStore'
@@ -130,6 +130,7 @@ export function NewSession() {
   const workout = workouts.find((w) => w.id === params.get('workout'))
   const sport = (params.get('sport') as Sport | null) ?? 'erg'
   const date = params.get('date') ?? undefined
+  if (workout && isBrick(workout)) return <Navigate to={`/log/multi/new?workout=${workout.id}${date ? `&date=${date}` : ''}`} replace />
   const initial = plan ? sessionFromPlanned(plan, workouts, maxes, zones) : workout ? sessionFromWorkout(workout, maxes, date, zones) : from ? copyOf(from) : blankSession(SPORTS[sport] ? sport : 'erg', date)
   return (
     <>

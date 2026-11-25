@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowLeft, ArrowLeftRight, ArrowUp, Link2, Pencil, Plus, Trash2, Unlink } from 'lucide-react'
+import { ArrowDown, ArrowLeft, ArrowLeftRight, ArrowUp, BookmarkPlus, Link2, Pencil, Plus, Trash2, Unlink } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Chips, Field, TextArea, TextInput, Toggle, inputClass } from '../../components/fields'
@@ -10,6 +10,8 @@ import { multisportTimeline, sessionLoad } from '../../log/stats'
 import type { Multisport, MultisportKind, Session, Sport } from '../../log/types'
 import { useSettings } from '../../settings/SettingsContext'
 import { blankSession } from '../../log/drafts'
+import { eventFromBrick, isBrick } from '../../library/workouts'
+import { useZoneContext } from '../../markers/useZones'
 import { SessionFields } from './SessionFields'
 import { SessionStats } from './SessionDetail'
 
@@ -217,10 +219,22 @@ export function NewMultisport() {
   const date = params.get('date') ?? todayIso()
   const kind = MULTISPORT_KINDS.find((k) => k.value === params.get('kind')) ?? MULTISPORT_KINDS[0]
   const title = params.get('title') ?? undefined
+  const { workouts, maxes } = useLog()
+  const zones = useZoneContext()
+  const brick = workouts.find((w) => w.id === params.get('workout') && isBrick(w))
+  const fromBrick = brick ? eventFromBrick(brick, maxes, date, zones) : undefined
   return (
     <>
-      <PageHeader title="Log multisport" subtitle="Each leg is its own session, linked together. Transitions are worked out from finish and start times if you don’t log them." />
-      <Form key={params.toString()} initialEvent={{ kind: kind.value, date, title, race: params.has('title') || undefined }} initialLegs={kind.legs.map((s) => legFor(s, date))} editing={false} />
+      <PageHeader
+        title="Log multisport"
+        subtitle={brick ? `From your library: ${brick.name}. Targets and fixed parts are filled in; add what actually happened.` : 'Each leg is its own session, linked together. Transitions are worked out from finish and start times if you don’t log them.'}
+      />
+      <Form
+        key={params.toString()}
+        initialEvent={fromBrick?.event ?? { kind: kind.value, date, title, race: params.has('title') || undefined }}
+        initialLegs={fromBrick ? fromBrick.legs.map((l) => ({ ...l, key: newId() })) : kind.legs.map((s) => legFor(s, date))}
+        editing={false}
+      />
     </>
   )
 }
@@ -270,6 +284,11 @@ export function MultisportDetail() {
           <Link to={`/log/multi/${event.id}/edit`} className="inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-2 text-sm font-semibold hover:bg-surface-2">
             <Pencil className="size-4" /> Edit
           </Link>
+          {!event.workoutId && legs.length > 0 && (
+            <Link to={`/library/new?fromEvent=${event.id}`} className="inline-flex items-center gap-1.5 rounded-lg border border-line px-3 py-2 text-sm font-semibold hover:bg-surface-2">
+              <BookmarkPlus className="size-4" /> Save to library
+            </Link>
+          )}
           <button
             type="button"
             onClick={() => {
