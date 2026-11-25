@@ -1,4 +1,4 @@
-import { Briefcase, Check, Clock, Flag, Plane, Plus, Repeat } from 'lucide-react'
+import { Briefcase, Check, Clock, Flag, Plane, Plus, Repeat, Waypoints } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Field, NumberInput } from '../../components/fields'
 import { formatPlanTime } from '../../library/workouts'
@@ -39,13 +39,14 @@ export function PlannedRow({ p, compact = false }: { p: PlannedSession; compact?
   const def = SPORTS[p.sport]
   const done = loggedFor(p, sessions)
   const missed = !done && !p.skipped && p.date < todayIso()
+  const brick = !!p.legSports?.length
   return (
     <Link
-      to={done ? `/log/session/${done.id}` : `/plan/session/${p.id}`}
+      to={done ? (done.multisportId ? `/log/multi/${done.multisportId}` : `/log/session/${done.id}`) : `/plan/session/${p.id}`}
       className={`flex items-center gap-3 rounded-xl border border-line bg-surface px-3 py-2.5 transition hover:border-accent/50 ${p.skipped ? 'opacity-60' : ''}`}
     >
-      <span className={`grid size-9 shrink-0 place-items-center rounded-lg ${def.soft} ${def.text}`}>
-        <def.icon className="size-4.5" />
+      <span className={`grid size-9 shrink-0 place-items-center rounded-lg ${brick ? 'bg-accent-soft text-accent-strong' : `${def.soft} ${def.text}`}`}>
+        {brick ? <Waypoints className="size-4.5" /> : <def.icon className="size-4.5" />}
       </span>
       <span className="min-w-0 flex-1">
         <span className={`flex items-center gap-1.5 font-semibold ${p.skipped ? 'line-through' : ''}`}>
@@ -55,6 +56,7 @@ export function PlannedRow({ p, compact = false }: { p: PlannedSession; compact?
         <span className="tabular flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
           {!compact && p.time && <span>{p.time}</span>}
           {p.durationSec ? <span>{formatPlanTime(Math.round(p.durationSec / 60) * 60)}</span> : null}
+          {brick && <span>{p.legSports!.map((s) => SPORTS[s].label).join(' → ')}</span>}
           <IntensityPill value={p.intensity} />
           {p.workoutId && <span>Library</span>}
           {missed && <span className="font-medium text-miss">Missed</span>}

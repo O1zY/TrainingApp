@@ -302,7 +302,7 @@ rep drift. HR zones live in Settings (max HR, editable zone tops, default 60/70/
 | This week (Home) | Each day is a button; the picked day shows its work, race, planned sessions still to do and what was logged, with "Add session". Open plan goes to that week |
 | Weight | `/log/weight`, from Log › Your numbers. Weigh-ins are the check-in's `weightKg` (one per day, same record as the daily check-in), so nothing new to sync. The 7-day trailing average is the headline (`src/analysis/weight.ts`), single weigh-ins are dots behind it; change over 4 and 12 weeks; optional goal weight (`targetWeightKg` in settings) drawn as a dashed line; ranges 4 wk to all |
 | Starter sessions | See Session library decisions above. Targets are relative (% FTP, offsets against threshold pace or CSS, HR zones), so they resolve from each user's markers |
-| Not done | Open-water swim sets; a weight goal date; planning a brick into a training block (see Bricks below) |
+| Not done | Open-water swim sets; a weight goal date |
 
 ## Bricks in the library (25 Nov 2026)
 
@@ -312,6 +312,19 @@ rep drift. HR zones live in Settings (max HR, editable zone tops, default 60/70/
 | Making one | Library › New workout › "Brick / multisport": pick the kind (it fills the usual legs while nothing is entered), then edit each leg with the same target and rep editors as a single workout. Or Save to library from a logged multisport event, which copies each leg's structure and targets, not its results. Transitions are never part of a brick: they come from start and finish times when it is logged |
 | Logging | "Log this workout" goes to `/log/multi/new?workout=id`: the event (kind, name) and one session per leg are pre-filled like a single workout, with zones and relative targets turned into numbers from the current markers. The event keeps `workoutId`; the legs don't, so a brick's history counts events. `/log/new?workout=id` for a brick redirects there. Deleting the brick unlinks its events |
 | Library | Bricks have their own icon and a Brick filter, and are kept out of the single-sport filters |
-| Planning | Not yet. The planner's pools and the swap-a-workout pickers skip bricks, since a planned session is one sport with one duration. Planning a brick as one session is the natural next step |
+| Planning | See "Planning bricks" below. The single-sport pools and the swap-a-workout pickers still skip bricks |
 | Starter set | Three bricks added (Yee's big brick, a bike–run brick, a sprint duathlon rehearsal). People who already added the starter set are offered new starters in a quiet row on the Library page, with Add and Hide; Hide is remembered on that device |
 | Fix | The workout form dropped relative targets (% FTP, vs threshold or CSS) whenever a target was edited; they are now kept |
+
+## Planning bricks (25 Nov 2026)
+
+| Topic | Decision |
+|---|---|
+| Setting | `bricksPerWeek` on the block (0–2), shown on the block form when the block has bike and run, or swim and bike. New blocks default to 1; blocks made before it, and coach-built blocks, have none, so existing plans don't change. The coach's own bricks (hard bike sessions that are benchmarks) are untouched |
+| Counting | A brick uses up one session in each sport it covers, so a bike–run brick replaces one bike and one run session and the week's volume and hard/easy mix stay as planned. It prefers slots of its own intensity, then easy, steady-hard, hard, and never the long session, a deload test or a race. With no slot left in a sport the brick is skipped and the plan notes it. `takeSlot` and `addBricks` in `src/plan/generate.ts` |
+| Weeks | Build weeks get `bricksPerWeek`; taper weeks get a short steady-hard sharpener; deload, race and recovery weeks none; an easy-only week from a review none. Sports a review dropped or cut back are not used |
+| What it is | The library mix decides, as for other sessions: a library brick (kind and legs as saved, intensity from its RPE), else a built-in one (`src/plan/bricks.ts`) rotating through the leg orders the block allows: bike–run, swim–bike (no run), swim–bike–run (all three), run–bike–run (a duathlon race on the calendar). Built-ins are steady-hard in the first build week and hard after, grow with the week's volume, and use relative targets (% FTP, vs threshold, vs CSS) |
+| Session | One `PlannedSession` with `legSports` (its `sport` is the first leg's), a `workoutId` or one-off with `legs`, and a duration from the legs plus warm-up and changes. Its sports all count as busy that day, so nothing else in them is put alongside it |
+| Re-planning | A logged or hand-set brick counts against the week's quota, so re-planning never adds a second. Swaps (morning check, library swap) clear `legSports`; a moved brick keeps it |
+| Logging | "Log this session" on a planned brick opens `/log/multi/new?plan=id`: the planned day and start time, every leg pre-filled, and each leg carrying the `planId`, so the plan ticks off and Analysis counts it done. A done brick links to its event |
+| Not yet | Strava grouping of a bike→run (or swim→bike) pair into a brick and matching it to the plan (a lone leg still ticks off a planned brick through the usual same-day match); writing bricks to Google Calendar as more than a title; coach-built blocks using real bricks |

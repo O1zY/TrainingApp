@@ -11,6 +11,8 @@ import type { Multisport, MultisportKind, Session, Sport } from '../../log/types
 import { useSettings } from '../../settings/SettingsContext'
 import { blankSession } from '../../log/drafts'
 import { eventFromBrick, isBrick } from '../../library/workouts'
+import { plannedWorkout } from '../../plan/planned'
+import { usePlan } from '../../plan/PlanStore'
 import { useZoneContext } from '../../markers/useZones'
 import { SessionFields } from './SessionFields'
 import { SessionStats } from './SessionDetail'
@@ -221,13 +223,24 @@ export function NewMultisport() {
   const title = params.get('title') ?? undefined
   const { workouts, maxes } = useLog()
   const zones = useZoneContext()
-  const brick = workouts.find((w) => w.id === params.get('workout') && isBrick(w))
-  const fromBrick = brick ? eventFromBrick(brick, maxes, date, zones) : undefined
+  const { planned } = usePlan()
+  const plan = planned.find((p) => p.id === params.get('plan') && p.legSports?.length)
+  const planBrick = plan ? plannedWorkout(plan, workouts) : undefined
+  const brick = planBrick?.legs?.length ? planBrick : workouts.find((w) => w.id === params.get('workout') && isBrick(w))
+  // From the plan: on the planned day, with the planned start on the first leg, and every leg ticking the plan off.
+  const built = brick ? eventFromBrick(brick, maxes, plan?.date ?? date, zones) : undefined
+  const fromBrick =
+    built && plan
+      ? {
+          event: { ...built.event, title: plan.title, workoutId: plan.workoutId },
+          legs: built.legs.map((l, i) => ({ ...l, planId: plan.id, startTime: i === 0 ? plan.time : undefined })),
+        }
+      : built
   return (
     <>
       <PageHeader
         title="Log multisport"
-        subtitle={brick ? `From your library: ${brick.name}. Targets and fixed parts are filled in; add what actually happened.` : 'Each leg is its own session, linked together. Transitions are worked out from finish and start times if you don’t log them.'}
+        subtitle={brick ? `${plan ? 'From your plan' : 'From your library'}: ${brick.name}. Targets and fixed parts are filled in; add what actually happened.` : 'Each leg is its own session, linked together. Transitions are worked out from finish and start times if you don’t log them.'}
       />
       <Form
         key={params.toString()}

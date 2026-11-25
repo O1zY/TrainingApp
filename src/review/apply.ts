@@ -40,6 +40,7 @@ export function applyProposals(accepted: ReviewProposal[], block: Block | undefi
         title: from.title,
         workoutId: from.workoutId,
         oneOff: from.oneOff,
+        legSports: from.legSports,
         benchmark: from.benchmark,
         durationSec: from.durationSec ?? to.durationSec,
         notes: [to.notes, `Moved from ${from.date}, when it was missed.`].filter(Boolean).join(' '),

@@ -2,6 +2,7 @@ import { newId } from '../log/format'
 import type { Sport, Workout } from '../log/types'
 import { blockWeeks, weekLabel, type PlanWeek } from './cycle'
 import { addDays, clockMin, minClock, weekDates, weekday } from './dates'
+import { blockCanDo, brickSets, builtInBrick, estimateBrickSec } from './bricks'
 import { covers } from './events'
 import { dayLoad, weekWork, type DayLoad } from './load'
 import { buildOneOff, estimateSec, specsFor, testOneOff } from './oneOffs'
@@ -49,6 +50,9 @@ interface Slot {
   race?: PlanEvent
   /** Which key/easy slot of this sport this is in the week, for rotating content. */
   nth: number
+  /** A brick: the sports of its legs, in order (`sport` is the first), and what was picked for it. */
+  legs?: Sport[]
+  brick?: { workout?: Workout; oneOff?: OneOff }
 }
 
 interface Filled {
@@ -189,6 +193,12 @@ function fill(input: PlanInput, week: PlanWeek, slot: Slot, rand: () => number, 
     return pick
   }
 
+  if (slot.brick) {
+    const { workout, oneOff } = slot.brick
+    const sec = estimateBrickSec((workout ?? oneOff)!.legs ?? [])
+    return workout ? { slot, title: workout.name, workoutId: workout.id, durationSec: sec, minSec: sec } : { slot, title: oneOff!.name, oneOff, durationSec: sec, minSec: sec }
+  }
+
   if (slot.race) {
     const r = slot.race
     return { slot, title: r.name, oneOff: { name: r.name, sport: slot.sport, type: 'race', tags: ['race'], description: r.notes }, durationSec: 0, minSec: 0 }
@@ -256,6 +266,60 @@ function take(free: [number, number][], from: number, to: number) {
   })
 }
 
+/**
+ * Removes the slot a brick's leg in `sport` takes up, and returns it, or undefined when the week
+ * has none to give. It prefers a slot of the brick's own intensity, then easy, steady-hard and
+ * finally hard ones, never the long session, the deload test or a race.
+ */
+function takeSlot(slots: Slot[], sport: Sport, intensity: Intensity): Slot | undefined {
+  const order: Intensity[] = [intensity, 'easy', 'moderate', 'key']
+  for (const want of order) {
+    const idx = slots.findIndex((s) => s.sport === sport && s.intensity === want && !s.long && !s.test && !s.race && !s.brick)
+    if (idx >= 0) return slots.splice(idx, 1)[0]
+  }
+  return undefined
+}
+
+/**
+ * Turns the block's bricks-per-week into brick slots. Each brick uses up one slot in every sport
+ * it covers, so the week's volume and hard/easy mix stay as planned. `have` is bricks already in
+ * the week (logged or set by hand). A brick with no matching slots left is skipped and noted.
+ */
+function addBricks(input: PlanInput, week: PlanWeek, slots: Slot[], rand: () => number, have: number, notes: string[]): Slot[] {
+  const { block, workouts, events } = input
+  const adj = block.weekAdjust?.[week.start]
+  const quota = (block.bricksPerWeek ?? 0) - have
+  if (quota <= 0 || (week.kind !== 'build' && week.kind !== 'taper') || adj?.easyOnly) return slots
+  const taper = week.kind === 'taper'
+  const free = (legs: Sport[]) => legs.every((s) => !adj?.drop?.includes(s) && !adj?.less?.includes(s)) && blockCanDo(block, legs)
+  const sets = brickSets(block, events).filter(free)
+  const library = taper ? [] : workouts.filter((w) => w.legs?.length && free(w.legs.map((l) => l.sport)))
+  const out = [...slots]
+  const usedLibrary = new Set<string>()
+
+  for (let i = 0; i < quota; i++) {
+    const pool = library.filter((w) => !usedLibrary.has(w.id))
+    const useLibrary = pool.length > 0 && rand() * 100 < block.libraryMix
+    if (!useLibrary && !sets.length) break
+    const workout = useLibrary ? pool[Math.floor(rand() * pool.length)] : undefined
+    const set = workout ? workout.legs!.map((l) => l.sport) : sets[(week.index + i) % sets.length]
+    // A brick's own intensity: a library one from its RPE; a built-in one steady-hard in the first
+    // build week, hard after; the taper sharpener steady-hard.
+    const intensity: Exclude<Intensity, 'race'> = workout ? workoutIntensity(workout) : taper || (week.buildNo ?? 1) < 2 ? 'moderate' : 'key'
+    const trial = [...out]
+    if (!set.every((s) => takeSlot(trial, s, intensity))) {
+      notes.push(`Week of ${week.start} (${weekLabel(week)}): no room for a ${set.join('–')} brick`)
+      break
+    }
+    const oneOff = workout ? undefined : builtInBrick(set, intensity === 'key' ? 'key' : 'moderate', week.volume, taper)
+    trial.push({ sport: set[0], intensity, nth: 0, legs: [...set], brick: { workout, oneOff } })
+    out.length = 0
+    out.push(...trial)
+    if (workout) usedLibrary.add(workout.id)
+  }
+  return out
+}
+
 function planWeek(input: PlanInput, week: PlanWeek, notes: string[], deloadNo: number): PlannedSession[] {
   const { block, events, commitments, prefs, fixed, from } = input
   const dates = weekDates(week.start)
@@ -290,9 +354,14 @@ function planWeek(input: PlanInput, week: PlanWeek, notes: string[], deloadNo: n
 
   // Sessions already fixed in this week fill the slots they match.
   for (const p of fixedHere) {
+    if (p.legSports?.length) {
+      for (const sport of p.legSports) takeSlot(slots, sport, p.intensity)
+      continue
+    }
     const idx = [slots.findIndex((s) => (p.eventId ? s.race?.id === p.eventId : s.sport === p.sport && s.intensity === p.intensity)), slots.findIndex((s) => !s.race && s.sport === p.sport)].find((i) => i >= 0)
     if (idx != null) slots.splice(idx, 1)
   }
+  slots = addBricks(input, week, slots, rand, fixedHere.filter((p) => p.legSports?.length).length, notes)
   // Only plan what's still ahead.
   slots = slots.filter((s) => !s.race || s.race.date >= from)
 
@@ -322,7 +391,7 @@ function planWeek(input: PlanInput, week: PlanWeek, notes: string[], deloadNo: n
       if (hard && (day.preRace || day.postRace)) continue
       const moving = day.sessions.filter((s) => s.sport !== 'recovery')
       if (!recovery && moving.length >= (block.doubles ? 2 : 1)) continue
-      if (day.sessions.some((s) => s.sport === slot.sport)) continue
+      if ((slot.legs ?? [slot.sport]).some((sp) => day.sessions.some((s) => s.sport === sp))) continue
       if (!recovery && !moving.length && trainingDays() >= block.maxDays) continue
 
       const at = placement(day, f)
@@ -356,7 +425,7 @@ function planWeek(input: PlanInput, week: PlanWeek, notes: string[], deloadNo: n
       continue
     }
     const { day, at } = best
-    day.sessions.push({ intensity: slot.intensity, sport: slot.sport, from: at.start, to: at.start + at.sec / 60 })
+    for (const sport of slot.legs ?? [slot.sport]) day.sessions.push({ intensity: slot.intensity, sport, from: at.start, to: at.start + at.sec / 60 })
     day.free = take(day.free, at.start, at.start + at.sec / 60)
     const oneOff = at.shortened && f.oneOff?.durationSec ? { ...f.oneOff, durationSec: at.sec } : f.oneOff
     out.push(toPlanned(block, { ...f, oneOff, durationSec: at.sec }, day, at, reasonFor(day, at, slot, prefs)))
@@ -434,6 +503,7 @@ function toPlanned(block: Block, f: Filled, day: Day, at: Placement | undefined,
     time: at ? minClock(at.start) : undefined,
     slot: at?.slot,
     sport: f.slot.sport,
+    legSports: f.slot.legs,
     intensity: f.slot.intensity,
     title: f.title,
     workoutId: f.workoutId,
