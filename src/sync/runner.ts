@@ -1,6 +1,7 @@
 import { useEffect, useSyncExternalStore } from 'react'
 import { onWrite } from '../storage'
 import { SYNCED, forgetBase, syncOnce, type SyncReport } from './engine'
+import { openWelcome } from '../welcome/welcomeState'
 import { SignedOut, readSession, signIn, signOut, signUp, supabaseRemote, syncConfigured } from './supabase'
 
 // When sync runs: on opening the app, a few seconds after any change, when the app comes
@@ -102,6 +103,7 @@ export async function signOutOfSync() {
   await signOut()
   forgetBase()
   set({ state: 'off', email: undefined, error: undefined, last: undefined, lastSync: undefined })
+  openWelcome()
 }
 
 /** Mounted once: runs sync in the background while signed in. */

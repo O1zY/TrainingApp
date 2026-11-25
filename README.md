@@ -20,7 +20,7 @@ To keep phone and laptop in step, give the app a free [Supabase](https://supabas
 1. Create a project, open **SQL Editor › New query**, paste in [supabase/schema.sql](supabase/schema.sql) and run it.
 2. In **Project Settings › API**, copy the project URL and the anon (publishable) key into `.env.local` as `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
 3. Under **Authentication › Sign In / Providers › Email**, either turn off "Confirm email", or leave it on and set **Authentication › URL Configuration › Site URL** to where you open the app (e.g. `http://localhost:5173`) so the confirmation link lands somewhere that works.
-4. Restart `npm run dev`, then **Settings › Sync across devices** on each device and sign in with the same email.
+4. Restart `npm run dev`. The app now opens on a sign-in screen: create an account (it asks what to call you), then sign in with the same email on each device. Your name is saved with the account, so every device greets you the same way. (**Settings › Sync across devices** shows the sync state and signs you out.)
 
 ## Hosting on Netlify
 

@@ -1,14 +1,12 @@
 import { Cloud, CloudOff, LogOut, RefreshCw } from 'lucide-react'
-import { useState, type FormEvent } from 'react'
-import { Field } from '../components/fields'
+import { useState } from 'react'
 import { Card } from '../components/ui'
 import { KEYS } from '../storage'
-import { signInAndSync, signOutOfSync, syncNow, useSyncStatus } from '../sync/runner'
+import { signOutOfSync, syncNow, useSyncStatus } from '../sync/runner'
 import { syncConfigured } from '../sync/supabase'
+import { SignInForm } from '../welcome/SignInForm'
 
 const btn = 'inline-flex items-center gap-1.5 rounded-full border border-line px-3.5 py-1.5 text-sm font-medium hover:bg-surface-2 disabled:opacity-50'
-const primary = 'inline-flex items-center gap-1.5 rounded-full bg-accent px-3.5 py-1.5 text-sm font-semibold text-on-accent hover:brightness-110 disabled:opacity-50'
-const input = 'w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-base md:py-2 md:text-sm'
 
 const STORE_NAME: Record<string, string> = { [KEYS.settings]: 'settings', [KEYS.log]: 'log', [KEYS.plan]: 'plan', [KEYS.strava]: 'Strava imports' }
 const names = (keys: string[]) => keys.map((k) => STORE_NAME[k] ?? k).join(', ')
@@ -24,11 +22,7 @@ function ago(iso: string) {
 /** Settings › Sync across devices: sign in to an account that keeps the data in step. */
 export function SyncCard() {
   const status = useSyncStatus()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
   const [create, setCreate] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const [message, setMessage] = useState<string>()
 
   if (!syncConfigured) {
     return (
@@ -43,20 +37,6 @@ export function SyncCard() {
     )
   }
 
-  const submit = async (e: FormEvent) => {
-    e.preventDefault()
-    setBusy(true)
-    setMessage(undefined)
-    try {
-      const r = await signInAndSync(email.trim(), password, create)
-      if (r === 'confirm') setMessage('Account made. Open the link in the email Supabase just sent, then sign in here.')
-      else setPassword('')
-    } catch (err) {
-      setMessage((err as Error).message)
-    }
-    setBusy(false)
-  }
-
   if (status.state === 'off') {
     return (
       <Card title="Sync across devices">
@@ -64,36 +44,9 @@ export function SyncCard() {
           Sign in on each device to keep your log, plan, library and settings the same everywhere. Changes made on two devices between syncs are combined, session by
           session. What’s already in this browser is added to the account the first time. Strava sign-in stays on the device that connected it.
         </p>
-        {status.error && <p className="mt-3 rounded-lg bg-over/15 px-3 py-2 text-sm">{status.error}</p>}
-        <form onSubmit={submit} className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <Field label="Email">
-            <input type="email" autoComplete="email" required className={input} value={email} onChange={(e) => setEmail(e.target.value)} />
-          </Field>
-          <Field label="Password">
-            <input
-              type="password"
-              autoComplete={create ? 'new-password' : 'current-password'}
-              required
-              minLength={create ? 8 : undefined}
-              className={input}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </Field>
-          <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
-            <button type="submit" disabled={busy} className={primary}>
-              <Cloud className="size-4" /> {create ? 'Create account and sync' : 'Sign in and sync'}
-            </button>
-            <button type="button" className="text-sm font-medium text-accent-strong" onClick={() => setCreate(!create)}>
-              {create ? 'I already have an account' : 'New here? Create an account'}
-            </button>
-          </div>
-        </form>
-        {message && (
-          <p className="mt-3 text-sm" aria-live="polite">
-            {message}
-          </p>
-        )}
+        <div className="mt-4 max-w-sm">
+          <SignInForm create={create} onCreateChange={setCreate} error={status.error} />
+        </div>
       </Card>
     )
   }

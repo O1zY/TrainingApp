@@ -7,6 +7,8 @@ export type ThemePref = 'system' | 'light' | 'dark'
 export type Units = 'metric' | 'imperial'
 
 export interface Settings {
+  /** What the app calls you ("Good morning, Ollie"). Part of the settings, so sync carries it to every device. */
+  name?: string
   theme: ThemePref
   units: Units
   /** 1 = Monday. Training weeks start on Monday by default. */
@@ -20,6 +22,11 @@ export interface Settings {
   retestWeeks: number
 }
 
+export const NAME_MAX = 40
+
+/** The name to greet by, or undefined while none is set. */
+export const displayName = (s: Pick<Settings, 'name'>) => s.name?.trim() || undefined
+
 const DEFAULTS: Settings = { theme: 'system', units: 'metric', weekStartsOn: 1, maxHR: 195, hrZoneTops: zonesFromMax(195), retestWeeks: 6 }
 
 // Settings live in localStorage (via src/storage.ts) until the database section is built.
@@ -27,6 +34,7 @@ function parseSettings(saved: Record<string, unknown>): Settings {
   const s = { ...DEFAULTS, ...saved }
   if (!Array.isArray(s.hrZoneTops) || s.hrZoneTops.length !== 4) s.hrZoneTops = zonesFromMax(Number(s.maxHR) || DEFAULTS.maxHR)
   if (!(Number(s.retestWeeks) >= 2)) s.retestWeeks = DEFAULTS.retestWeeks
+  s.name = typeof s.name === 'string' ? s.name.slice(0, NAME_MAX) : undefined
   if (s.zones != null && (typeof s.zones !== 'object' || Array.isArray(s.zones))) s.zones = undefined
   return s
 }

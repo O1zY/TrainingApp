@@ -1,8 +1,15 @@
-import { Plus, Settings as SettingsIcon } from 'lucide-react'
+import { LogIn, Plus, Settings as SettingsIcon } from 'lucide-react'
 import { Suspense } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { ErrorBoundary } from '../components/ErrorBoundary'
 import { StorageBanner } from '../components/StorageBanner'
+import { displayName, useSettings } from '../settings/SettingsContext'
+import { useSyncStatus } from '../sync/runner'
+import { syncConfigured } from '../sync/supabase'
+import { initialOf } from '../welcome/greeting'
+import { Welcome } from '../welcome/Welcome'
+import { useWelcomeVisible } from '../welcome/useWelcomeVisible'
+import { openWelcome } from '../welcome/welcomeState'
 import { NAV } from './nav'
 
 const APP_NAME = 'Training Tracker'
@@ -24,6 +31,52 @@ const sideLink = ({ isActive }: { isActive: boolean }) =>
 
 function Marker() {
   return <span className="absolute inset-y-2 left-0 w-[3px] rounded-full bg-accent opacity-0 transition group-aria-[current=page]:opacity-100" />
+}
+
+/** Who's signed in, or a Sign in button while nobody is. Null when there's no account to speak of. */
+function useAccount() {
+  const { settings } = useSettings()
+  const status = useSyncStatus()
+  const name = displayName(settings)
+  const signedIn = syncConfigured && status.state !== 'off'
+  const label = name ?? status.email
+  const detail = !syncConfigured ? 'This device only' : status.state === 'syncing' ? 'Syncing…' : status.state === 'error' ? 'Not synced' : 'Synced'
+  return { signedIn, label, detail, initial: initialOf(label) }
+}
+
+function Avatar({ initial, className = '' }: { initial: string; className?: string }) {
+  return (
+    <span className={`font-display grid shrink-0 place-items-center rounded-full bg-accent font-bold text-on-accent ${className}`} aria-hidden>
+      {initial || '•'}
+    </span>
+  )
+}
+
+/** Sidebar footer: your name and sync state, or a bold Sign in while signed out. */
+function AccountChip() {
+  const { signedIn, label, detail, initial } = useAccount()
+  if (syncConfigured && !signedIn) {
+    return (
+      <button
+        type="button"
+        onClick={openWelcome}
+        className="mb-2 flex w-full items-center justify-center gap-2 rounded-full bg-accent px-3 py-2.5 text-sm font-semibold text-on-accent transition hover:brightness-110"
+      >
+        <LogIn className="size-4" strokeWidth={2.5} />
+        Sign in
+      </button>
+    )
+  }
+  if (!label) return null
+  return (
+    <NavLink to="/settings" className="mb-2 flex items-center gap-3 rounded-xl px-3 py-2 hover:bg-ink-2/60">
+      <Avatar initial={initial} className="size-9 text-sm" />
+      <span className="min-w-0 text-left">
+        <span className="block truncate text-sm font-semibold">{label}</span>
+        <span className="block text-xs text-ink-muted">{detail}</span>
+      </span>
+    </NavLink>
+  )
 }
 
 /** Laptop and tablet: fixed sidebar on the left. */
@@ -57,6 +110,8 @@ function Sidebar() {
         ))}
       </nav>
 
+      <AccountChip />
+
       <NavLink
         to="/settings"
         className={sideLink}
@@ -71,12 +126,27 @@ function Sidebar() {
 
 /** Phone: slim top bar. */
 function TopBar() {
+  const { signedIn, label, initial } = useAccount()
   return (
     <header className="sticky top-0 z-20 flex items-center justify-between bg-ink px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] text-on-ink md:hidden">
       <Brand />
-      <NavLink to="/settings" aria-label="Settings" className="grid size-9 place-items-center rounded-lg text-ink-muted hover:bg-ink-2">
-        <SettingsIcon className="size-5" />
-      </NavLink>
+      <div className="flex items-center gap-1">
+        {syncConfigured && !signedIn ? (
+          <button type="button" onClick={openWelcome} className="mr-1 inline-flex items-center gap-1.5 rounded-full bg-accent px-3.5 py-1.5 text-sm font-semibold text-on-accent">
+            <LogIn className="size-4" strokeWidth={2.5} />
+            Sign in
+          </button>
+        ) : (
+          label && (
+            <NavLink to="/settings" aria-label={`${label}, account settings`} className="mr-1">
+              <Avatar initial={initial} className="size-8 text-sm" />
+            </NavLink>
+          )
+        )}
+        <NavLink to="/settings" aria-label="Settings" className="grid size-9 place-items-center rounded-lg text-ink-muted hover:bg-ink-2">
+          <SettingsIcon className="size-5" />
+        </NavLink>
+      </div>
     </header>
   )
 }
@@ -116,6 +186,9 @@ function PageLoading() {
 
 export function AppShell() {
   const { pathname } = useLocation()
+  const welcome = useWelcomeVisible()
+  // The Strava sign-in comes back to this app with a code in the address; leave that alone.
+  if (welcome && !pathname.startsWith('/strava/callback')) return <Welcome />
   return (
     <div className="flex min-h-dvh">
       <Sidebar />

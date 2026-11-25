@@ -13,15 +13,11 @@ import { daysBetween } from '../plan/dates'
 import { raceLabel } from '../plan/events'
 import { loggedFor } from '../plan/planned'
 import { usePlan } from '../plan/PlanStore'
-import { useSettings } from '../settings/SettingsContext'
+import { displayName, useSettings } from '../settings/SettingsContext'
+import { greeting } from '../welcome/greeting'
 import { suggestFromLog } from '../markers/estimate'
 import { MARKERS, currentMarkers, formatMarker, isDue } from '../markers/markers'
 import { MorningCheckCard, ReviewDueCard } from './plan/ReviewCards'
-
-function greeting(d: Date) {
-  const h = d.getHours()
-  return h < 12 ? 'Morning' : h < 18 ? 'Afternoon' : 'Evening'
-}
 
 function weekDays(today: Date, weekStartsOn: 0 | 1) {
   const start = new Date(today)
@@ -60,8 +56,14 @@ export default function Home() {
           {today.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
         </p>
         <h1 className="mt-1.5 text-4xl font-bold md:text-5xl">
-          {greeting(today)}, Ollie<span className="text-accent">.</span>
+          {greeting(today, displayName(settings))}
+          <span className="text-accent">.</span>
         </h1>
+        {!displayName(settings) && (
+          <Link to="/settings" className="mt-1 inline-block text-sm font-medium text-accent-strong">
+            What should we call you?
+          </Link>
+        )}
       </div>
 
       <BackupReminder sessionCount={sessions.length} />

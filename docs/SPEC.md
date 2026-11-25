@@ -168,6 +168,18 @@ rep drift. HR zones live in Settings (max HR, editable zone tops, default 60/70/
 | Backups | Still offered. A restore while signed in replaces the account's copy too (said in the confirm), since the restored data is newer than the base |
 | Not yet | Realtime push from the server (changes arrive on the next sync instead), deleting the account's data from inside the app (delete the rows or the user in Supabase) |
 
+## Welcome screen and your name (25 Nov 2026)
+
+| Topic | Decision |
+|---|---|
+| Why | Sign-in lived at the bottom of Settings, and the Home greeting had a name typed into the code. Signing in should be the first thing you see, and the app should know who you are on every device |
+| Name | `name` in `tt-settings` (up to 40 characters), so sync and backups carry it with no extra wiring. Set when making an account ("What should we call you?") or in Settings › Display › Your name. Home reads "Good morning, Ollie."; with no name it reads "Good morning." with a "What should we call you?" link |
+| Welcome screen | Covers the whole app whenever sync is set up and nobody is signed in (`src/welcome/Welcome.tsx`, shown from `AppShell`). A greeting for the time of day, your name if this device knows it ("Welcome back"), the date, sessions logged here and days to the next race, beside the sign-in / create-account form. Without sync set up (no Supabase keys) it never appears |
+| New device | A device that has never seen you says "Good morning." and, once you sign in, the first sync brings your name (and everything else) down before the app opens, so Home greets you by name straight away |
+| Skipping | "Use without signing in" lets the app open for that browser tab's session (`sessionStorage`), so a reload doesn't nag but a new tab or app launch asks again. Signing out brings the screen straight back. The Strava return address (`/strava/callback`) is never covered |
+| Always visible | Sidebar (laptop) and top bar (phone) show your initial, name and sync state while signed in, and a bold Sign in button, which reopens the screen, while not |
+| Code | `src/welcome/` (greeting, tested; state; form shared with Settings › Sync) |
+
 ## AI coach: research-led plan builder (proposed 12 Nov 2026, not yet agreed)
 
 | Topic | Proposal |
