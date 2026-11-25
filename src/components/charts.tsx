@@ -294,3 +294,134 @@ export function Sparkline({ values, className = 'stroke-accent', width = 96, hei
     </svg>
   )
 }
+
+export interface TrendPoint {
+  label: string
+  /** Position along the x axis, in days (any shared origin). Gaps between readings stay gaps. */
+  at: number
+  value: number
+  avg: number
+}
+
+/**
+ * Readings as dots with their running average as a line, on an axis that fits the data
+ * (weight never starts at zero). An optional goal is a dashed line. A crosshair snaps to the
+ * nearest reading and its readout gives the value and the average.
+ */
+export function TrendChart({
+  points,
+  goal,
+  height = 240,
+  format,
+  valueLabel = 'Reading',
+  avgLabel = 'Average',
+  goalLabel = 'Goal',
+}: {
+  points: TrendPoint[]
+  goal?: number
+  height?: number
+  format: (v: number) => string
+  valueLabel?: string
+  avgLabel?: string
+  goalLabel?: string
+}) {
+  const [ref, width] = useWidth<HTMLDivElement>()
+  const [hover, setHover] = useState<number>()
+  const padL = 44
+  const padR = 8
+  const padB = 22
+  const padT = 10
+  const plotW = Math.max(0, width - padL - padR)
+  const plotH = height - padB - padT
+  const n = points.length
+  const vals = [...points.flatMap((p) => [p.value, p.avg]), ...(goal != null ? [goal] : [])]
+  const lo0 = Math.min(...vals)
+  const hi0 = Math.max(...vals)
+  const pad = Math.max(0.5, (hi0 - lo0) * 0.15)
+  const lo = lo0 - pad
+  const hi = hi0 + pad
+  const t0 = points[0]?.at ?? 0
+  const span = Math.max(1, (points[n - 1]?.at ?? 1) - t0)
+  const x = (at: number) => padL + (n > 1 ? ((at - t0) / span) * plotW : plotW / 2)
+  const y = (v: number) => padT + plotH - ((v - lo) / (hi - lo || 1)) * plotH
+  const step = (hi - lo) / 3
+  const yt = [0, 1, 2, 3].map((i) => lo + step * i)
+  const labelEvery = Math.max(1, Math.ceil(n / Math.max(1, Math.floor(plotW / 72))))
+
+  const nearest = (clientX: number) => {
+    const rect = ref.current!.getBoundingClientRect()
+    const px = clientX - rect.left
+    let best = 0
+    for (let i = 1; i < n; i++) if (Math.abs(x(points[i].at) - px) < Math.abs(x(points[best].at) - px)) best = i
+    setHover(best)
+  }
+  const h = hover != null ? points[hover] : undefined
+
+  return (
+    <div ref={ref} className="relative select-none">
+      {width > 0 && n > 0 && (
+        <svg
+          width={width}
+          height={height}
+          role="img"
+          aria-label={`${valueLabel} and ${avgLabel.toLowerCase()} over time`}
+          tabIndex={0}
+          className="block outline-none"
+          onPointerMove={(e) => nearest(e.clientX)}
+          onPointerLeave={() => setHover(undefined)}
+          onKeyDown={(e) => {
+            if (e.key === 'ArrowLeft') setHover((v) => Math.max(0, (v ?? n) - 1))
+            if (e.key === 'ArrowRight') setHover((v) => Math.min(n - 1, (v ?? -1) + 1))
+          }}
+          onBlur={() => setHover(undefined)}
+        >
+          {yt.map((t) => (
+            <g key={t}>
+              <line x1={padL} x2={width - padR} y1={y(t)} y2={y(t)} className="stroke-line" strokeWidth={1} />
+              <text x={padL - 6} y={y(t)} dy="0.32em" textAnchor="end" className="fill-muted text-[10px] tabular">
+                {format(t)}
+              </text>
+            </g>
+          ))}
+          {goal != null && (
+            <line x1={padL} x2={width - padR} y1={y(goal)} y2={y(goal)} className="stroke-hit" strokeWidth={1.5} strokeDasharray="5 4" />
+          )}
+          {points.map((p, i) => (
+            <circle key={i} cx={x(p.at)} cy={y(p.value)} r={hover === i ? 4 : 2.5} className="fill-muted/50" />
+          ))}
+          <polyline fill="none" className="stroke-accent" strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" points={points.map((p) => `${x(p.at)},${y(p.avg)}`).join(' ')} />
+          {points.map((p, i) =>
+            i % labelEvery === 0 ? (
+              <text key={i} x={x(p.at)} y={height - 6} textAnchor="middle" className="fill-muted text-[10px]">
+                {p.label}
+              </text>
+            ) : null,
+          )}
+          {h && (
+            <g>
+              <line x1={x(h.at)} x2={x(h.at)} y1={padT} y2={padT + plotH} className="stroke-muted" strokeWidth={1} strokeDasharray="2 3" />
+              <circle cx={x(h.at)} cy={y(h.avg)} r={4.5} className="fill-accent stroke-surface" strokeWidth={2} />
+            </g>
+          )}
+        </svg>
+      )}
+      {h && (
+        <div
+          className="pointer-events-none absolute top-0 z-10 min-w-36 rounded-xl border border-line bg-surface px-3 py-2 text-xs shadow-lg"
+          style={x(h.at) > width / 2 ? { right: width - x(h.at) + 10 } : { left: x(h.at) + 10 }}
+        >
+          <div className="mb-1 font-medium text-muted">{h.label}</div>
+          <Readout keyClass="size-2 rounded-full bg-muted/60" label={valueLabel} value={format(h.value)} />
+          <Readout keyClass="h-0.5 w-3 rounded-full bg-accent" label={avgLabel} value={format(h.avg)} />
+        </div>
+      )}
+      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
+        <span className="flex items-center gap-1.5">
+          <span className="size-2 rounded-full bg-muted/60" /> {valueLabel}
+        </span>
+        <LegendKey kind="line" className="bg-accent" label={avgLabel} />
+        {goal != null && <LegendKey kind="line" className="bg-hit" label={`${goalLabel} ${format(goal)}`} />}
+      </div>
+    </div>
+  )
+}

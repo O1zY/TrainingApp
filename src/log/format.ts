@@ -74,6 +74,15 @@ export function formatDistance(m: number | undefined, unit: 'm' | 'km' | 'mi'): 
   return (m / distanceFactor(unit)).toFixed(2).replace(/\.?0+$/, '')
 }
 
+/** 7.5 → "7h 30m", 8 → "8h". Sleep is stored as decimal hours but read as hours and minutes. */
+export function formatSleep(hours: number | undefined): string {
+  if (hours == null || !Number.isFinite(hours)) return ''
+  const total = Math.round(hours * 60)
+  const h = Math.floor(total / 60)
+  const m = total % 60
+  return m ? `${h}h ${String(m).padStart(2, '0')}m` : `${h}h`
+}
+
 export const weightUnit = (units: Units) => (units === 'metric' ? 'kg' : 'lb')
 export const weightFactor = (units: Units) => (units === 'metric' ? 1 : KG_PER_LB)
 export const formatWeight = (kg: number | undefined, units: Units) =>

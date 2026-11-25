@@ -94,6 +94,41 @@ export function NumberInput({
   )
 }
 
+/**
+ * A length of time as two boxes, hours and minutes, stored as decimal hours (7 h 30 m → 7.5).
+ */
+/** Digits only, at most 59: "7" stays "7", "75" becomes "59", empty stays empty. */
+const clampMinutes = (raw: string) => {
+  const digits = raw.replace(/\D/g, '').slice(0, 2)
+  return digits && Number(digits) > 59 ? '59' : digits
+}
+
+export function HoursMinutesInput({ value, onChange, 'aria-label': label = 'Time' }: { value: number | undefined; onChange: (hours: number | undefined) => void; 'aria-label'?: string }) {
+  const toText = (v: number | undefined) => {
+    if (v == null) return { h: '', m: '' }
+    const total = Math.round(v * 60)
+    return { h: String(Math.floor(total / 60)), m: String(total % 60) }
+  }
+  const [text, setText] = useState(() => toText(value))
+  const toHours = (t: { h: string; m: string }) => (!t.h && !t.m ? undefined : (Number(t.h || 0) * 60 + Number(t.m || 0)) / 60)
+  // The boxes keep what was typed; they only reset when the value changes from outside (another date).
+  const typed = toHours(text)
+  if ((typed == null) !== (value == null) || (typed != null && value != null && Math.abs(typed - value) > 1e-6)) setText(toText(value))
+  const edit = (next: { h: string; m: string }) => {
+    setText(next)
+    onChange(toHours(next))
+  }
+  const box = `${inputClass} text-center`
+  return (
+    <div className="flex items-center gap-1.5" role="group" aria-label={label}>
+      <input aria-label={`${label}, hours`} className={box} inputMode="numeric" placeholder="7" value={text.h} onChange={(e) => edit({ ...text, h: e.target.value.replace(/\D/g, '').slice(0, 2) })} />
+      <span className="text-sm text-muted">h</span>
+      <input aria-label={`${label}, minutes`} className={box} inputMode="numeric" placeholder="30" value={text.m} onChange={(e) => edit({ ...text, m: clampMinutes(e.target.value) })} />
+      <span className="text-sm text-muted">m</span>
+    </div>
+  )
+}
+
 /** Duration in seconds, typed as h:mm:ss, m:ss.t or a bare number (minutes by default). */
 export function TimeInput({ bare = 'min', placeholder = 'm:ss', ...rest }: Omit<ParsedProps<number>, 'parse' | 'format'> & { bare?: 'min' | 'sec' }) {
   return <ParsedInput<number> {...rest} inputMode="text" placeholder={placeholder} parse={(t) => parseTime(t, bare)} format={(v) => formatTime(v)} />

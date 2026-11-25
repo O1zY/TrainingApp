@@ -20,6 +20,8 @@ export interface Settings {
   zones?: ZoneOverrides
   /** Fitness markers suggest a re-test after this many weeks. */
   retestWeeks: number
+  /** Goal body weight in kg, drawn on the weight chart. */
+  targetWeightKg?: number
 }
 
 export const NAME_MAX = 40
@@ -34,6 +36,7 @@ function parseSettings(saved: Record<string, unknown>): Settings {
   const s = { ...DEFAULTS, ...saved }
   if (!Array.isArray(s.hrZoneTops) || s.hrZoneTops.length !== 4) s.hrZoneTops = zonesFromMax(Number(s.maxHR) || DEFAULTS.maxHR)
   if (!(Number(s.retestWeeks) >= 2)) s.retestWeeks = DEFAULTS.retestWeeks
+  if (!(Number(s.targetWeightKg) > 0)) s.targetWeightKg = undefined
   s.name = typeof s.name === 'string' ? s.name.slice(0, NAME_MAX) : undefined
   if (s.zones != null && (typeof s.zones !== 'object' || Array.isArray(s.zones))) s.zones = undefined
   return s

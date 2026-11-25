@@ -1,6 +1,6 @@
 import { HeartPulse, Waypoints } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { PACE_LABEL, distanceUnit, formatDate, formatDistance, formatPace, formatTime, paceKind, paceValue, todayIso } from '../../log/format'
+import { PACE_LABEL, distanceUnit, formatDate, formatDistance, formatPace, formatSleep, formatTime, paceKind, paceValue, todayIso } from '../../log/format'
 import { useLog } from '../../log/LogStore'
 import { SPORTS, eventName, sessionName } from '../../log/sports'
 import { multisportTimeline, sortSessions, wellnessScore } from '../../log/stats'
@@ -94,12 +94,25 @@ function Row({ item }: { item: Item }) {
       <span className="min-w-0">
         <span className="block truncate font-medium">Check-in</span>
         <span className="tabular block truncate text-xs text-muted">
-          {[score != null && `Wellness ${score}/5`, item.w.sleepHours != null && `Sleep ${item.w.sleepHours}h`, item.w.restingHr != null && `RHR ${item.w.restingHr}`]
+          {[score != null && `Wellness ${score}/5`, item.w.sleepHours != null && `Sleep ${formatSleep(item.w.sleepHours)}`, item.w.restingHr != null && `RHR ${item.w.restingHr}`]
             .filter(Boolean)
             .join(' · ') || 'Notes only'}
         </span>
       </span>
     </Link>
+  )
+}
+
+/** What was logged on one day, in the same rows as the history. Nothing renders when the day is empty. */
+export function DayFeed({ date }: { date: string }) {
+  const items = useFeed().find(([d]) => d === date)?.[1]
+  if (!items?.length) return null
+  return (
+    <div>
+      {items.map((item) => (
+        <Row key={item.kind === 'session' ? item.s.id : item.kind === 'event' ? item.m.id : `w-${item.w.date}`} item={item} />
+      ))}
+    </div>
   )
 }
 

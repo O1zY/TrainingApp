@@ -1,8 +1,9 @@
-import { BookOpen, Plus, Search } from 'lucide-react'
+import { BookOpen, Plus, Search, Sparkles } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { inputClass } from '../../components/fields'
-import { EmptyState, PageHeader } from '../../components/ui'
+import { Card, EmptyState, PageHeader } from '../../components/ui'
+import { STARTER_WORKOUTS, missingStarters } from '../../library/starter'
 import { allTags, structureSummary } from '../../library/workouts'
 import { formatDate } from '../../log/format'
 import { useLog } from '../../log/LogStore'
@@ -57,8 +58,37 @@ function WorkoutCard({ w }: { w: Workout }) {
   )
 }
 
+/** Offered until any starter workout is in the library, so deleting some later doesn't bring the offer back. */
+function StarterOffer({ onAdd, compact }: { onAdd: () => void; compact?: boolean }) {
+  const sports = [...new Set(STARTER_WORKOUTS.map((w) => SPORTS[w.sport].label))]
+  const button = (
+    <button type="button" onClick={onAdd} className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-on-accent hover:opacity-90">
+      <Sparkles className="size-4" /> Add {STARTER_WORKOUTS.length} starter workouts
+    </button>
+  )
+  if (compact) return button
+  return (
+    <Card>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h2 className="font-semibold">Start with a triathlon and duathlon set</h2>
+          <p className="mt-1 text-sm text-muted">
+            Sessions from the Brownlee brothers, Alex Yee and the Norwegian triathlon team, plus the field tests that set your zones ({sports.join(', ').toLowerCase()}). Each says where it comes from, and the targets
+            follow your fitness markers.
+          </p>
+        </div>
+        {button}
+      </div>
+    </Card>
+  )
+}
+
 export default function LibraryHome() {
-  const { workouts } = useLog()
+  const { workouts, saveWorkout } = useLog()
+  const addStarters = () => {
+    for (const w of missingStarters(workouts)) saveWorkout({ ...w, createdAt: undefined })
+  }
+  const offerStarters = !workouts.some((w) => STARTER_WORKOUTS.some((s) => s.id === w.id))
   const [q, setQ] = useState('')
   const [sport, setSport] = useState<Sport>()
   const [tags, setTags] = useState<string[]>([])
@@ -79,8 +109,10 @@ export default function LibraryHome() {
           body="Save the sessions you do often, or ones from research, with their structure and targets. Then log them in one tap, with the targets already filled in."
         >
           <div className="mt-5 flex flex-col items-center gap-3">
+            <StarterOffer onAdd={addStarters} compact />
+            <span className="text-xs text-muted">or</span>
             {newButton}
-            <p className="text-xs text-muted">Or open any logged session and tap “Save to library”.</p>
+            <p className="text-xs text-muted">Open any logged session and tap “Save to library” to add your own.</p>
           </div>
         </EmptyState>
       </>
@@ -99,6 +131,12 @@ export default function LibraryHome() {
   return (
     <>
       <PageHeader title="Library" subtitle={`${workouts.length} workout${workouts.length === 1 ? '' : 's'}`} action={newButton} />
+
+      {offerStarters && (
+        <div className="mb-5">
+          <StarterOffer onAdd={addStarters} />
+        </div>
+      )}
 
       <div className="space-y-3">
         <div className="relative">

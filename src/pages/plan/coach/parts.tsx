@@ -5,7 +5,7 @@ import type { CoachNote } from '../../../plan/types'
 import type { ReactNode } from 'react'
 import { Field, FieldGroup, MultiChips, Scale, TextArea, TextInput, Toggle, inputClass } from '../../../components/fields'
 import { chip } from '../../../components/styles'
-import { formatTime } from '../../../log/format'
+import { formatSleep, formatTime } from '../../../log/format'
 import { SPORTS } from '../../../log/sports'
 import type { TrainingHistory, WorkPattern } from '../../../coach/history'
 import { cap, injuryFlags, injuryTitle, type Flag } from '../../../coach/screening'
@@ -196,7 +196,7 @@ export function HistorySummary({ h }: { h: TrainingHistory }) {
         )}
         {h.checkins && (
           <Line label={`Check-ins, last 4 weeks (${h.checkins.count})`}>
-            {[h.checkins.sleepHours && `${h1(h.checkins.sleepHours)}h sleep`, h.checkins.restingHr && `RHR ${Math.round(h.checkins.restingHr)}`, h.checkins.hrv && `HRV ${Math.round(h.checkins.hrv)}`]
+            {[h.checkins.sleepHours && `${formatSleep(h.checkins.sleepHours)} sleep`, h.checkins.restingHr && `RHR ${Math.round(h.checkins.restingHr)}`, h.checkins.hrv && `HRV ${Math.round(h.checkins.hrv)}`]
               .filter(Boolean)
               .join(' · ') || '—'}
           </Line>

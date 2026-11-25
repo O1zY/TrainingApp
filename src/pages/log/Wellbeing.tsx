@@ -1,9 +1,9 @@
 import { ArrowLeft, Pencil, Trash2 } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
-import { Field, NumberInput, Scale, TextArea, TextInput, Toggle } from '../../components/fields'
+import { Field, HoursMinutesInput, NumberInput, Scale, TextArea, TextInput, Toggle } from '../../components/fields'
 import { Card, PageHeader } from '../../components/ui'
-import { formatDate, formatWeight, todayIso, weightFactor, weightUnit } from '../../log/format'
+import { formatDate, formatSleep, formatWeight, todayIso, weightFactor, weightUnit } from '../../log/format'
 import { useLog } from '../../log/LogStore'
 import { sortSessions, wellnessScore, type WELLBEING_BAD, type WELLBEING_GOOD } from '../../log/stats'
 import { SPORTS, sessionName } from '../../log/sports'
@@ -32,7 +32,7 @@ export function WellbeingSummary({ w }: { w: Wellbeing }) {
   const score = wellnessScore(w)
   const chips: [string, string][] = []
   if (score != null) chips.push(['Wellness', `${score}/5`])
-  if (w.sleepHours != null) chips.push(['Sleep', `${w.sleepHours}h`])
+  if (w.sleepHours != null) chips.push(['Sleep', formatSleep(w.sleepHours)])
   if (w.restingHr != null) chips.push(['Resting HR', `${w.restingHr}`])
   if (w.hrv != null) chips.push(['HRV', `${w.hrv}ms`])
   if (w.weightKg != null) chips.push(['Weight', `${formatWeight(w.weightKg, settings.units)}${weightUnit(settings.units)}`])
@@ -86,8 +86,8 @@ export function WellbeingForm() {
               }}
             />
           </Field>
-          <Field label="Sleep" unit="hours">
-            <NumberInput value={draft.sleepHours} decimals={1} onChange={(sleepHours) => patch({ sleepHours })} placeholder="7.5" />
+          <Field label="Sleep" unit="hours · minutes">
+            <HoursMinutesInput aria-label="Sleep" value={draft.sleepHours} onChange={(sleepHours) => patch({ sleepHours })} />
           </Field>
           <Field label="Resting HR" unit="bpm">
             <NumberInput integer value={draft.restingHr} onChange={(restingHr) => patch({ restingHr })} />

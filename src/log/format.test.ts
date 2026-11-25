@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { clockToSec, ergWatts, estimate1Rm, formatHoursMinutes, formatTime, parseTime, secToClock } from './format'
+import { clockToSec, ergWatts, estimate1Rm, formatHoursMinutes, formatSleep, formatTime, parseTime, secToClock } from './format'
 
 describe('parseTime', () => {
   it.each([
@@ -60,4 +60,14 @@ describe('formatHoursMinutes', () => {
     [19800, '5:30'],
     [36000, '10:00'],
   ])('%s s → %s', (sec, text) => expect(formatHoursMinutes(sec)).toBe(text))
+})
+
+describe('formatSleep', () => {
+  it('reads decimal hours as hours and minutes', () => {
+    expect(formatSleep(7.5)).toBe('7h 30m')
+    expect(formatSleep(8)).toBe('8h')
+    expect(formatSleep(7 + 20 / 60)).toBe('7h 20m')
+    expect(formatSleep(6 + 5 / 60)).toBe('6h 05m')
+    expect(formatSleep(undefined)).toBe('')
+  })
 })
